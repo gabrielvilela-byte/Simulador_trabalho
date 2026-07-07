@@ -5,73 +5,55 @@ import streamlit as st
 # =================================================================
 st.set_page_config(page_title="Simulador Previsc", page_icon="🏢", layout="wide")
 
-# Injeção de CSS para usar a paleta de cores da Previsc (Azul Escuro #1B365D)
 st.markdown("""
     <style>
-    /* Cor dos Títulos */
-    h1, h2, h3 {
-        color: #1B365D !important;
-    }
-    /* Estilo dos Botões Principais */
+    h1, h2, h3 { color: #1B365D !important; }
     div.stButton > button:first-child {
-        background-color: #1B365D;
-        color: white;
-        border-radius: 6px;
-        border: none;
-        padding: 10px 24px;
-        font-weight: bold;
+        background-color: #1B365D; color: white; border-radius: 6px;
+        border: none; padding: 10px 24px; font-weight: bold;
     }
-    /* Efeito ao passar o mouse no botão */
-    div.stButton > button:first-child:hover {
-        background-color: #274D85;
-        color: white;
-    }
-    /* Cor do texto das abas (Tabs) */
+    div.stButton > button:first-child:hover { background-color: #274D85; color: white; }
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        font-weight: bold;
-        color: #1B365D;
+        font-weight: bold; color: #1B365D;
     }
-    /* Cor da linha divisória */
-    hr {
-        border-color: #1B365D;
-    }
+    hr { border-color: #1B365D; }
     </style>
 """, unsafe_allow_html=True)
 
 
 # =================================================================
-# 2. BANCO DE DADOS DOS PLANOS
+# 2. BANCO DE DADOS DOS PLANOS ATUALIZADO
 # =================================================================
 planos = {
     "FIESCPREV": {"ur": 716.54, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tipo": "fatias"},
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tipo": "fatias"},
     "SENACPREV": {"ur": 699.76, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tipo": "fatias"},
-    "SENAI-PIPREV": {"ur": 7376.89, "teto_urs": 0.5, "aliq_1": 0.010, "aliq_2": 0.040, "tipo": "fatias"}, 
-    "PREVSENAI-MA": {"ur": 5042.89, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.140, "tipo": "fatias"},
-    "PREVISC SENAI-MA": {"ur": 560.37, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.140, "tipo": "fatias"},
-    "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"},
-    "PREVIFIEA": {"ur": 8258.59, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "livre"},
+    "PREVISC SENAI-MA": {"ur": 560.37, "teto1_urs": 4.5, "teto2_urs": 9.0, "aliq_1": 0.030, "aliq_2": 0.05, "aliq_3": 0.23, "tipo": "fatias_triplas_senai"},
     "PREVISC SISTEMA FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.03, "aliq_2": 0.075, "tipo": "fatias"},
     "FECOMERCIO": {"ur": 504.97, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tipo": "fatias"},
     "FIEMTPREV": {"ur": 688.24, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tipo": "fatias"},
-    "PREVFIEPA": {"ur": 7740.09, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "livre"},
     "PREVISC": {"ur": 710.76, "teto_urs": 7.0, "aliq_1": 0.03, "aliq_2": 0.14, "tipo": "fatias"},
-    "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "livre"},
+    "UNIVALIPrevidencia": {"ur": 623.33, "teto_urs": 8.0, "aliq_1": 0.030, "aliq_2_migrante": 0.1400, "aliq_2_nao_migrante": 0.1700, "tipo": "fatias_univali"},
+    "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.02, "aliq_2": 0.14, "tipo": "fatias"},
     "SESC SC (SESCPREV)": {"ur": 878.70, "teto_urs": 10.0, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
-    "UNIVALIPrevidencia": {"ur": 623.33, "teto_urs": 8.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tipo": "fatias"},
-    "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.017218, "aliq_2": 0.137741, "tipo": "fatias"},
-    "UNERJPREV": {"ur": 8475.55, "teto_urs": 1.0, "aliq_1": 0.0025, "aliq_2": 0.03, "tipo": "idade"} 
+    "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "up_sem_teto"},
+    "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"}
 }
 
+
 # =================================================================
-# 3. MOTORES MATEMÁTICOS
+# 3. MOTORES MATEMÁTICOS AVANÇADOS
 # =================================================================
-def calcular_contribuicao(plano_nome, salario):
+def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante=True):
     plano = planos[plano_nome]
     tipo = plano.get("tipo", "fatias")
     
-    if tipo in ["livre", "fixo", "idade"]:
-        return 0.0, 0.0, 0.0 
+    if tipo == "fixo":
+        return 0.0, 0.0, 0.0, 0.0 
+        
+    if tipo == "up_sem_teto":
+        aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
+        return (salario * aliq_aplicar), (salario * aliq_aplicar), 0.0, 0.0
         
     if tipo == "sesc_triplo":
         ur = plano["ur"]
@@ -79,39 +61,102 @@ def calcular_contribuicao(plano_nome, salario):
         teto2_rs = ur * 11.4288
         
         if salario <= teto1_rs:
-            return salario * plano["aliq_1"], salario * plano["aliq_1"], 0.0
+            f1 = salario * plano["aliq_1"]
+            return f1, f1, 0.0, 0.0
         elif salario <= teto2_rs:
             f1 = teto1_rs * plano["aliq_1"]
             f2 = (salario * plano["aliq_2"]) - (0.4190 * ur)
-            return f1 + f2, f1, f2
+            return f1 + f2, f1, f2, 0.0
         else:
             f1 = teto1_rs * plano["aliq_1"]
             f2 = (teto2_rs * plano["aliq_2"]) - (0.4190 * ur)
             f3 = (salario * plano["aliq_3"]) - (1.3424 * ur)
-            return f1 + f2 + f3, f1, f2+f3
+            return f1 + f2 + f3, f1, f2, f3
 
+    if tipo == "fatias_triplas_senai":
+        ur = plano["ur"]
+        teto1_rs = ur * plano["teto1_urs"]
+        teto2_rs = ur * plano["teto2_urs"]
+        
+        if salario <= teto1_rs:
+            f1 = salario * plano["aliq_1"]
+            return f1, f1, 0.0, 0.0
+        elif salario <= teto2_rs:
+            f1 = teto1_rs * plano["aliq_1"]
+            f2 = (salario - teto1_rs) * plano["aliq_2"]
+            return f1 + f2, f1, f2, 0.0
+        else:
+            f1 = teto1_rs * plano["aliq_1"]
+            f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
+            f3 = (salario - teto2_rs) * plano["aliq_3"]
+            return f1 + f2 + f3, f1, f2, f3
+
+    if tipo == "fatias_univali":
+        teto_rs = plano["ur"] * plano["teto_urs"]
+        aliq_2 = plano["aliq_2_migrante"] if univali_migrante else plano["aliq_2_nao_migrante"]
+        
+        if salario <= teto_rs:
+            f1 = salario * plano["aliq_1"]
+            return f1, f1, 0.0, 0.0
+        else:
+            f1 = teto_rs * plano["aliq_1"]
+            f2 = (salario - teto_rs) * aliq_2
+            return f1 + f2, f1, f2, 0.0
+
+    # Categoria Fatias (Padrão)
     teto_rs = plano["ur"] * plano["teto_urs"]
     if salario <= teto_rs:
-        return salario * plano["aliq_1"], salario * plano["aliq_1"], 0.0
+        f1 = salario * plano["aliq_1"]
+        return f1, f1, 0.0, 0.0
     else:
         f1 = teto_rs * plano["aliq_1"]
         f2 = (salario - teto_rs) * plano["aliq_2"]
-        return f1 + f2, f1, f2
+        return f1 + f2, f1, f2, 0.0
 
-def calcular_salario_reverso(plano_nome, contribuicao):
+
+def calcular_salario_reverso(plano_nome, contribuicao, aliq_escolhida=None, univali_migrante=True):
     plano = planos[plano_nome]
     tipo = plano.get("tipo", "fatias")
     
-    if tipo in ["livre", "fixo", "idade", "sesc_triplo"]:
+    if tipo in ["fixo", "sesc_triplo"]:
         return 0.0 
         
+    if tipo == "up_sem_teto":
+        aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
+        return contribuicao / aliq_aplicar
+        
+    if tipo == "fatias_triplas_senai":
+        ur = plano["ur"]
+        teto1_rs = ur * plano["teto1_urs"]
+        teto2_rs = ur * plano["teto2_urs"]
+        max_f1 = teto1_rs * plano["aliq_1"]
+        max_f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        elif contribuicao <= max_f1 + max_f2:
+            return teto1_rs + ((contribuicao - max_f1) / plano["aliq_2"])
+        else:
+            return teto2_rs + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
+
+    if tipo == "fatias_univali":
+        teto_rs = plano["ur"] * plano["teto_urs"]
+        max_f1 = teto_rs * plano["aliq_1"]
+        aliq_2 = plano["aliq_2_migrante"] if univali_migrante else plano["aliq_2_nao_migrante"]
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        else:
+            return teto_rs + ((contribuicao - max_f1) / aliq_2)
+
+    # Categoria Fatias (Padrão)
     teto_rs = plano["ur"] * plano["teto_urs"]
     max_f1 = teto_rs * plano["aliq_1"]
-    
     if contribuicao <= max_f1:
         return contribuicao / plano["aliq_1"]
     else:
         return teto_rs + ((contribuicao - max_f1) / plano["aliq_2"])
+
 
 # =================================================================
 # 4. INTERFACE VISUAL 
@@ -120,6 +165,13 @@ st.title("🏢 Simulador Previsc")
 st.write("Base de cálculos atualizada com as regras de Custeio oficiais.")
 
 plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
+plano_dados = planos[plano_selecionado]
+
+# Controle dinâmico para UNIVALI
+univali_migrante = True
+if plano_selecionado == "UNIVALIPrevidencia":
+    tipo_univali = st.radio("Selecione a categoria do participante:", ["Migrante", "Não Migrante"], horizontal=True)
+    univali_migrante = (tipo_univali == "Migrante")
 
 st.divider()
 
@@ -131,14 +183,29 @@ with aba_normal:
         st.subheader("Calcular Contribuição")
         salario_input = st.number_input("Digite o Salário de Participação (R$):", min_value=0.0, value=0.0, step=100.0, format="%.2f")
         
+        aliq_escolhida = None
+        if plano_dados["tipo"] == "up_sem_teto":
+            st.info(f"A UP atual deste plano é de R$ {plano_dados['ur']:,.2f}")
+            if salario_input > 0:
+                qtd_ups = salario_input / plano_dados["ur"]
+                st.write(f"O seu salário equivale a **{qtd_ups:,.2f} UPs**.")
+            aliq_input = st.number_input("Alíquota de Contribuição (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5)
+            aliq_escolhida = aliq_input / 100
+        
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
-                total, f1, f2 = calcular_contribuicao(plano_selecionado, salario_input)
+                total, f1, f2, f3 = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante)
+                
                 if total == 0:
-                    st.info("Este plano utiliza regra de Alíquota Livre (escolha do participante), Mínimo Fixo ou baseada em Idade. Consulte o regulamento.")
+                    st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
+                elif plano_dados["tipo"] == "up_sem_teto":
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
                 else:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
-                    st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2/Excedente:** R$ {f2:,.2f}")
+                    if f3 > 0:
+                        st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2:** R$ {f2:,.2f} | **Fatia 3/Excedente:** R$ {f3:,.2f}")
+                    else:
+                        st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2/Excedente:** R$ {f2:,.2f}")
             else:
                 st.warning("Insira um salário válido.")
 
@@ -148,11 +215,16 @@ with aba_reversa:
         st.subheader("Engenharia Reversa")
         contrib_input = st.number_input("Digite a Contribuição Alvo (R$):", min_value=0.0, value=0.0, step=10.0, format="%.2f")
         
+        aliq_escolhida_rev = None
+        if plano_dados["tipo"] == "up_sem_teto":
+            aliq_input_rev = st.number_input("Alíquota Utilizada (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5, key="aliq_rev")
+            aliq_escolhida_rev = aliq_input_rev / 100
+            
         if st.button("Descobrir Salário", type="primary"):
             if contrib_input > 0:
-                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input)
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante)
                 if salario_descob == 0:
-                    st.info("A engenharia reversa para este plano específico requer alinhamento de variáveis livres ou de idade.")
+                    st.info("A engenharia reversa para este plano específico requer alinhamento de variáveis complexas e fatias de dedução.")
                 else:
                     st.success(f"**Salário Exato Necessário:** R$ {salario_descob:,.2f}")
             else:
