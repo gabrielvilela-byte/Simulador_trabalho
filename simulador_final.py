@@ -38,7 +38,7 @@ planos = {
     "SESC SC (SESCPREV)": {"ur": 878.70, "teto_urs": 10.0, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "up_sem_teto"},
     "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"},
-    "UNERJPREV": {"ur": 8475.55, "teto_urs": 1.0, "aliq_1": 0.0025, "tipo": "unerjprev_idade"} # 0.25% = 0.0025
+    "UNERJPREV": {"ur": 8475.55, "teto_urs": 1.0, "aliq_1": 0.0025, "tipo": "unerjprev_idade"} 
 }
 
 
@@ -57,25 +57,23 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         return (salario * aliq_aplicar), (salario * aliq_aplicar), 0.0, 0.0
         
     if tipo == "unerjprev_idade":
-        teto_inss = plano["ur"] # 8475.55
+        teto_inss = plano["ur"] # R$ 8.475,55
         
-        # Define alíquota excedente pela idade
-        if idade <= 44:
-            aliq_2 = 0.03
-        elif 45 <= idade <= 49:
-            aliq_2 = 0.04
-        elif 50 <= idade <= 54:
-            aliq_2 = 0.05
-        else: # 55 a 64 (ou mais)
-            aliq_2 = 0.06
-            
+        # O cálculo agora aplica a alíquota de forma integral sobre todo o salário (sem fatias)
         if salario <= teto_inss:
-            f1 = salario * plano["aliq_1"] # 0.25%
-            return f1, f1, 0.0, 0.0
+            aliq = plano["aliq_1"] # 0.25%
         else:
-            f1 = teto_inss * plano["aliq_1"]
-            f2 = (salario - teto_inss) * aliq_2
-            return f1 + f2, f1, f2, 0.0
+            if idade <= 44:
+                aliq = 0.03
+            elif 45 <= idade <= 49:
+                aliq = 0.04
+            elif 50 <= idade <= 54:
+                aliq = 0.05
+            else: 
+                aliq = 0.06
+                
+        total = salario * aliq
+        return total, total, 0.0, 0.0 # Como é alíquota única, não tem fatia 2 ou 3
 
     if tipo == "sesc_triplo":
         ur = plano["ur"]
@@ -150,21 +148,21 @@ def calcular_salario_reverso(plano_nome, contribuicao, aliq_escolhida=None, univ
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"]
         
-        if idade <= 44:
-            aliq_2 = 0.03
-        elif 45 <= idade <= 49:
-            aliq_2 = 0.04
-        elif 50 <= idade <= 54:
-            aliq_2 = 0.05
-        else: 
-            aliq_2 = 0.06
-            
-        max_f1 = teto_inss * plano["aliq_1"]
+        # A contribuição máxima antes de o regulamento virar a chave para as novas alíquotas:
+        max_025 = teto_inss * plano["aliq_1"]
         
-        if contribuicao <= max_f1:
+        if contribuicao <= max_025:
             return contribuicao / plano["aliq_1"]
         else:
-            return teto_inss + ((contribuicao - max_f1) / aliq_2)
+            if idade <= 44:
+                aliq = 0.03
+            elif 45 <= idade <= 49:
+                aliq = 0.04
+            elif 50 <= idade <= 54:
+                aliq = 0.05
+            else: 
+                aliq = 0.06
+            return contribuicao / aliq
 
     if tipo == "fatias_triplas_senai":
         ur = plano["ur"]
@@ -249,13 +247,13 @@ with aba_normal:
                 
                 if total == 0:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
-                elif plano_dados["tipo"] == "up_sem_teto":
+                elif plano_dados["tipo"] in ["up_sem_teto", "unerjprev_idade"]:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
                 else:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
                     if f3 > 0:
                         st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2:** R$ {f2:,.2f} | **Fatia 3/Excedente:** R$ {f3:,.2f}")
-                    elif f2 > 0 or plano_dados.get("tipo") == "unerjprev_idade":
+                    elif f2 > 0:
                         st.write(f"**Fatia 1 (Até Teto):** R$ {f1:,.2f} | **Fatia 2 (Excedente):** R$ {f2:,.2f}")
             else:
                 st.warning("Insira um salário válido.")
