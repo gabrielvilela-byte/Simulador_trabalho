@@ -1,7 +1,7 @@
 import streamlit as st
 
 # =================================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E CORES DA PREVISC
+# 1. CONFIGURAÇÃO DA PÁGINA E CORES
 # =================================================================
 st.set_page_config(page_title="Simulador Previsc", page_icon="🏢", layout="wide")
 
@@ -37,14 +37,15 @@ planos = {
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.02, "aliq_2": 0.14, "tipo": "fatias"},
     "SESC SC (SESCPREV)": {"ur": 878.70, "teto_urs": 10.0, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "up_sem_teto"},
-    "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"}
+    "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"},
+    "UNERJPREV": {"ur": 8475.55, "teto_urs": 1.0, "aliq_1": 0.0025, "tipo": "unerjprev_idade"} # 0.25% = 0.0025
 }
 
 
 # =================================================================
 # 3. MOTORES MATEMÁTICOS AVANÇADOS
 # =================================================================
-def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante=True):
+def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante=True, idade=30):
     plano = planos[plano_nome]
     tipo = plano.get("tipo", "fatias")
     
@@ -55,6 +56,27 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
         return (salario * aliq_aplicar), (salario * aliq_aplicar), 0.0, 0.0
         
+    if tipo == "unerjprev_idade":
+        teto_inss = plano["ur"] # 8475.55
+        
+        # Define alíquota excedente pela idade
+        if idade <= 44:
+            aliq_2 = 0.03
+        elif 45 <= idade <= 49:
+            aliq_2 = 0.04
+        elif 50 <= idade <= 54:
+            aliq_2 = 0.05
+        else: # 55 a 64 (ou mais)
+            aliq_2 = 0.06
+            
+        if salario <= teto_inss:
+            f1 = salario * plano["aliq_1"] # 0.25%
+            return f1, f1, 0.0, 0.0
+        else:
+            f1 = teto_inss * plano["aliq_1"]
+            f2 = (salario - teto_inss) * aliq_2
+            return f1 + f2, f1, f2, 0.0
+
     if tipo == "sesc_triplo":
         ur = plano["ur"]
         teto1_rs = ur * 10.0
@@ -114,7 +136,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         return f1 + f2, f1, f2, 0.0
 
 
-def calcular_salario_reverso(plano_nome, contribuicao, aliq_escolhida=None, univali_migrante=True):
+def calcular_salario_reverso(plano_nome, contribuicao, aliq_escolhida=None, univali_migrante=True, idade=30):
     plano = planos[plano_nome]
     tipo = plano.get("tipo", "fatias")
     
@@ -125,6 +147,25 @@ def calcular_salario_reverso(plano_nome, contribuicao, aliq_escolhida=None, univ
         aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
         return contribuicao / aliq_aplicar
         
+    if tipo == "unerjprev_idade":
+        teto_inss = plano["ur"]
+        
+        if idade <= 44:
+            aliq_2 = 0.03
+        elif 45 <= idade <= 49:
+            aliq_2 = 0.04
+        elif 50 <= idade <= 54:
+            aliq_2 = 0.05
+        else: 
+            aliq_2 = 0.06
+            
+        max_f1 = teto_inss * plano["aliq_1"]
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        else:
+            return teto_inss + ((contribuicao - max_f1) / aliq_2)
+
     if tipo == "fatias_triplas_senai":
         ur = plano["ur"]
         teto1_rs = ur * plano["teto1_urs"]
@@ -167,11 +208,18 @@ st.write("Base de cálculos atualizada com as regras de Custeio oficiais.")
 plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
 plano_dados = planos[plano_selecionado]
 
-# Controle dinâmico para UNIVALI
+# Controles Dinâmicos Exclusivos
 univali_migrante = True
-if plano_selecionado == "UNIVALIPrevidencia":
-    tipo_univali = st.radio("Selecione a categoria do participante:", ["Migrante", "Não Migrante"], horizontal=True)
-    univali_migrante = (tipo_univali == "Migrante")
+idade_input = 30
+
+col_ctrl1, col_ctrl2 = st.columns(2)
+with col_ctrl1:
+    if plano_selecionado == "UNIVALIPrevidencia":
+        tipo_univali = st.radio("Categoria do participante:", ["Migrante", "Não Migrante"], horizontal=True)
+        univali_migrante = (tipo_univali == "Migrante")
+    
+    if plano_dados.get("tipo") == "unerjprev_idade":
+        idade_input = st.number_input("Idade do Participante na Adesão:", min_value=16, max_value=80, value=30, step=1)
 
 st.divider()
 
@@ -191,10 +239,13 @@ with aba_normal:
                 st.write(f"O seu salário equivale a **{qtd_ups:,.2f} UPs**.")
             aliq_input = st.number_input("Alíquota de Contribuição (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5)
             aliq_escolhida = aliq_input / 100
+            
+        if plano_dados.get("tipo") == "unerjprev_idade":
+            st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {plano_dados['ur']:,.2f}")
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
-                total, f1, f2, f3 = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante)
+                total, f1, f2, f3 = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, idade_input)
                 
                 if total == 0:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
@@ -204,8 +255,8 @@ with aba_normal:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
                     if f3 > 0:
                         st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2:** R$ {f2:,.2f} | **Fatia 3/Excedente:** R$ {f3:,.2f}")
-                    else:
-                        st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2/Excedente:** R$ {f2:,.2f}")
+                    elif f2 > 0 or plano_dados.get("tipo") == "unerjprev_idade":
+                        st.write(f"**Fatia 1 (Até Teto):** R$ {f1:,.2f} | **Fatia 2 (Excedente):** R$ {f2:,.2f}")
             else:
                 st.warning("Insira um salário válido.")
 
@@ -222,7 +273,7 @@ with aba_reversa:
             
         if st.button("Descobrir Salário", type="primary"):
             if contrib_input > 0:
-                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante)
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, idade_input)
                 if salario_descob == 0:
                     st.info("A engenharia reversa para este plano específico requer alinhamento de variáveis complexas e fatias de dedução.")
                 else:
