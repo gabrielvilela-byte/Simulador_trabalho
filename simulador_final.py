@@ -28,7 +28,7 @@ planos = {
     "FIESCPREV": {"ur": 716.54, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tipo": "fatias"},
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tipo": "fatias"},
     "SENACPREV": {"ur": 699.76, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tipo": "fatias"},
-    "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "tipo": "fatias_triplas_senai"},
+    "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tipo": "fatias_triplas_senai"},
     "PREVISC SENAI-MA": {"ur": 560.37, "teto1_urs": 4.5, "teto2_urs": 9.0, "aliq_1": 0.030, "aliq_2": 0.05, "aliq_3": 0.23, "tipo": "fatias_triplas_senai"},
     "PREVISC SISTEMA FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.03, "aliq_2": 0.075, "tipo": "fatias"},
     "FECOMERCIO": {"ur": 504.97, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tipo": "fatias"},
@@ -50,13 +50,16 @@ planos = {
 def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
     plano = planos[plano_nome]
     tipo = plano.get("tipo", "fatias")
+    taxa_superavit = plano.get("superavit", 0.0)
     
     if tipo == "fixo":
-        return 0.0, 0.0, 0.0, 0.0 
+        return 0.0, 0.0, 0.0, 0.0, 0.0
         
     if tipo == "up_sem_teto":
         aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
-        return (salario * aliq_aplicar), (salario * aliq_aplicar), 0.0, 0.0
+        total_bruto = salario * aliq_aplicar
+        superavit = total_bruto * taxa_superavit
+        return (total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"] 
@@ -71,15 +74,15 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
                 aliq = 0.05
             else: 
                 aliq = 0.06
-        total = salario * aliq
-        return total, total, 0.0, 0.0 
+        total_bruto = salario * aliq
+        superavit = total_bruto * taxa_superavit
+        return (total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
 
     if tipo == "fatias_quadruplas_fiea":
         up = plano["ur"]
         teto1 = up * 0.5   
         teto2 = up         
         teto3 = up * 3.0   
-        
         f1 = f2 = f3 = f4 = 0.0
         
         if salario <= teto1:
@@ -97,12 +100,12 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
             f3 = (teto3 - teto2) * plano["aliq_3"]
             f4 = (salario - teto3) * plano["aliq_4"]
             
-        total = f1 + f2 + f3 + f4
-        return total, f1, (f2 + f3), f4
+        total_bruto = f1 + f2 + f3 + f4
+        superavit = total_bruto * taxa_superavit
+        return (total_bruto - superavit), f1, (f2 + f3), f4, superavit
 
     if tipo == "fatias_univali":
         teto_rs = plano["ur"] * plano["teto_urs"]
-        
         if univali_migrante == "Migrante":
             aliq_2 = 0.14
         else: 
@@ -113,11 +116,14 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
                     
         if salario <= teto_rs:
             f1 = salario * plano["aliq_1"]
-            return f1, f1, 0.0, 0.0
+            f2 = 0.0
         else:
             f1 = teto_rs * plano["aliq_1"]
             f2 = (salario - teto_rs) * aliq_2
-            return f1 + f2, f1, f2, 0.0
+            
+        total_bruto = f1 + f2
+        superavit = total_bruto * taxa_superavit
+        return (total_bruto - superavit), f1, f2, 0.0, superavit
 
     if tipo == "sesc_triplo":
         ur = plano["ur"]
@@ -126,16 +132,19 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         
         if salario <= teto1_rs:
             f1 = salario * plano["aliq_1"]
-            return f1, f1, 0.0, 0.0
+            f2 = f3 = 0.0
         elif salario <= teto2_rs:
             f1 = teto1_rs * plano["aliq_1"]
             f2 = (salario * plano["aliq_2"]) - (0.4190 * ur)
-            return f1 + f2, f1, f2, 0.0
+            f3 = 0.0
         else:
             f1 = teto1_rs * plano["aliq_1"]
             f2 = (teto2_rs * plano["aliq_2"]) - (0.4190 * ur)
             f3 = (salario * plano["aliq_3"]) - (1.3424 * ur)
-            return f1 + f2 + f3, f1, f2, f3
+            
+        total_bruto = f1 + f2 + f3
+        superavit = total_bruto * taxa_superavit
+        return (total_bruto - superavit), f1, f2, f3, superavit
 
     if tipo == "fatias_triplas_senai":
         ur = plano["ur"]
@@ -144,31 +153,41 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         
         if salario <= teto1_rs:
             f1 = salario * plano["aliq_1"]
-            return f1, f1, 0.0, 0.0
+            f2 = f3 = 0.0
         elif salario <= teto2_rs:
             f1 = teto1_rs * plano["aliq_1"]
             f2 = (salario - teto1_rs) * plano["aliq_2"]
-            return f1 + f2, f1, f2, 0.0
+            f3 = 0.0
         else:
             f1 = teto1_rs * plano["aliq_1"]
             f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
             f3 = (salario - teto2_rs) * plano["aliq_3"]
-            return f1 + f2 + f3, f1, f2, f3
+            
+        total_bruto = f1 + f2 + f3
+        superavit = total_bruto * taxa_superavit
+        return (total_bruto - superavit), f1, f2, f3, superavit
 
     # Categoria Fatias (Padrão)
     teto_rs = plano["ur"] * plano["teto_urs"]
     if salario <= teto_rs:
         f1 = salario * plano["aliq_1"]
-        return f1, f1, 0.0, 0.0
+        f2 = 0.0
     else:
         f1 = teto_rs * plano["aliq_1"]
         f2 = (salario - teto_rs) * plano["aliq_2"]
-        return f1 + f2, f1, f2, 0.0
+        
+    total_bruto = f1 + f2
+    superavit = total_bruto * taxa_superavit
+    return (total_bruto - superavit), f1, f2, 0.0, superavit
 
 
-def calcular_salario_reverso(plano_nome, contribuicao, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
+def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
     plano = planos[plano_nome]
     tipo = plano.get("tipo", "fatias")
+    taxa_superavit = plano.get("superavit", 0.0)
+    
+    # Se houver superávit, o valor recebido na tela (líquido) é "inflado" para o bruto original
+    contribuicao = contribuicao_liquida / (1 - taxa_superavit)
     
     if tipo in ["fixo", "sesc_triplo"]:
         return 0.0 
@@ -309,7 +328,7 @@ with aba_normal:
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
-                total, f1, f2, f3 = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input)
+                total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input)
                 
                 if total == 0:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
@@ -320,6 +339,9 @@ with aba_normal:
                     st.write(f"**Fatia Base (Até 0,5 UP):** R$ {f1:,.2f} | **Fatias Intermédias:** R$ {f2:,.2f} | **Fatia Topo (Acima de 3 UPs):** R$ {f3:,.2f}")
                 else:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    if superavit > 0:
+                        st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {superavit:,.2f}**")
+                        
                     if f3 > 0:
                         st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2:** R$ {f2:,.2f} | **Fatia 3/Excedente:** R$ {f3:,.2f}")
                     elif f2 > 0:
