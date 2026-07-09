@@ -32,10 +32,10 @@ st.markdown("""
 
 
 # =================================================================
-# 2. BANCO DE DADOS DOS PLANOS E ALIASES (APELIDOS)
+# 2. BANCO DE DADOS DOS PLANOS
 # =================================================================
 planos = {
-    "FIESCPREV": {"ur": 716.84, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tipo": "fatias"},
+    "FIESCPREV": {"ur": 716.54, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tipo": "fatias"},
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tipo": "fatias"},
     "SENACPREV": {"ur": 699.76, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tipo": "fatias"},
     "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tipo": "fatias_triplas_senai"},
@@ -53,24 +53,10 @@ planos = {
     "UNERJPREV": {"ur": 8475.55, "teto_urs": 1.0, "aliq_1": 0.0025, "tipo": "unerjprev_idade"} 
 }
 
-# Tradutor de apelidos na planilha para o nome oficial do banco de dados
-apelidos_planilha = {
-    "SESCPREV": "SESC SC (SESCPREV)",
-    "SESC SC": "SESC SC (SESCPREV)",
-    "SENAI-PI": "SENAI-PIPREV",
-    "SENAI-MA": "PREVISC SENAI-MA",
-    "FIEMA": "PREVISC SENAI-MA"
-}
 
 # =================================================================
-# 3. MOTORES MATEMÁTICOS E FORMATAÇÃO
+# 3. MOTORES MATEMÁTICOS AVANÇADOS
 # =================================================================
-def formatar_br(valor):
-    if isinstance(valor, (int, float)):
-        # Formata com separador de milhar americano e ponto decimal, depois inverte para o padrão PT-BR
-        return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return valor
-
 def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
     plano = planos.get(plano_nome)
     if not plano:
@@ -425,7 +411,7 @@ elif menu_selecionado == "📂 Cálculo em Lote":
     
     # Gerar a Planilha Modelo para Download (Baseada nas colunas que você enviou + opcionais)
     df_modelo = pd.DataFrame({
-        "Plano": ["FIESCPREV", "SESCPREV", "UNIVALIPrevidencia"],
+        "Plano": ["FIESCPREV", "SENAI-PIPREV", "UNIVALIPrevidencia"],
         "Salário Bruto": [4500.00, 8000.00, 5200.00],
         "Idade (Opcional)": [30, 45, 35],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0],
@@ -456,26 +442,26 @@ elif menu_selecionado == "📂 Cálculo em Lote":
             
             resultados = []
             for idx, row in df_lote.iterrows():
-                # Pega o nome do plano da planilha e verifica se tem algum apelido
-                plano_excel = str(row.get("Plano", "")).strip().upper()
-                plano_oficial = apelidos_planilha.get(plano_excel, str(row.get("Plano", "")).strip())
-                
-                if plano_oficial in planos:
+                plano = str(row.get("Plano", "")).strip()
+                if plano in planos:
+                    # Lê os dados, usando "Salário Bruto" como base
                     salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
                     
+                    # Leitura de campos opcionais (se não existirem, usa o padrão)
                     idade = int(row.get("Idade (Opcional)", 30)) if "Idade (Opcional)" in df_lote.columns and pd.notna(row.get("Idade (Opcional)")) else 30
                     aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote.columns else 0.0
                     aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
                     univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote.columns else "Migrante"
                     univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote.columns else "Normal"
                     
-                    total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade)[0]
+                    # Calcular (Pega apenas o primeiro retorno: a contribuição final a pagar)
+                    total_pagar = calcular_contribuicao(plano, salario, aliq, univ_cat, univ_tipo, idade)[0]
                     resultados.append(total_pagar)
                 else:
-                    resultados.append("Plano Não Encontrado")
+                    resultados.append("Plano Inválido/Não Encontrado")
             
-            # Adiciona a coluna com a formatação monetária 0,00
-            df_lote["Contribuição Sugerida (R$)"] = [formatar_br(v) for v in resultados]
+            # Adicionar a coluna de resultado ao DataFrame
+            df_lote["Contribuição Sugerida (R$)"] = resultados
             
             st.success("Cálculo em lote finalizado com sucesso! Veja a prévia abaixo e faça o download do resultado.")
             st.dataframe(df_lote, use_container_width=True)
