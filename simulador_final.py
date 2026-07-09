@@ -97,7 +97,6 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
             f4 = (salario - teto3) * plano["aliq_4"]
             
         total = f1 + f2 + f3 + f4
-        # Retornamos o total, f1, e combinamos as fatias do meio/topo para visualização na tela
         return total, f1, (f2 + f3), f4
 
     if tipo == "fatias_univali":
@@ -314,7 +313,33 @@ with aba_normal:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
                 elif plano_selecionado == "PREVIFIEA":
                     st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
-                    # Como f2 retorna a soma das faixas intermédias na FIEA, mostramos o fatiamento simplificado
                     st.write(f"**Fatia Base (Até 0,5 UP):** R$ {f1:,.2f} | **Fatias Intermédias:** R$ {f2:,.2f} | **Fatia Topo (Acima de 3 UPs):** R$ {f3:,.2f}")
                 else:
-                    st.success(f
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    if f3 > 0:
+                        st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2:** R$ {f2:,.2f} | **Fatia 3/Excedente:** R$ {f3:,.2f}")
+                    elif f2 > 0:
+                        st.write(f"**Fatia 1 (Até Teto):** R$ {f1:,.2f} | **Fatia 2 (Excedente):** R$ {f2:,.2f}")
+            else:
+                st.warning("Insira um salário válido.")
+
+with aba_reversa:
+    col3, col4 = st.columns(2)
+    with col3:
+        st.subheader("Engenharia Reversa")
+        contrib_input = st.number_input("Digite a Contribuição Alvo (R$):", min_value=0.0, value=0.0, step=10.0, format="%.2f")
+        
+        aliq_escolhida_rev = None
+        if plano_dados["tipo"] == "up_sem_teto":
+            aliq_input_rev = st.number_input("Alíquota Utilizada (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5, key="aliq_rev")
+            aliq_escolhida_rev = aliq_input_rev / 100
+            
+        if st.button("Descobrir Salário", type="primary"):
+            if contrib_input > 0:
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input)
+                if salario_descob == 0:
+                    st.info("A engenharia reversa para este plano específico requer alinhamento de variáveis complexas e fatias de dedução.")
+                else:
+                    st.success(f"**Salário Exato Necessário:** R$ {salario_descob:,.2f}")
+            else:
+                st.warning("Insira uma contribuição válida.")
