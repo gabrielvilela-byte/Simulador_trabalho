@@ -58,7 +58,10 @@ planos = {
 # 3. MOTORES MATEMÁTICOS AVANÇADOS
 # =================================================================
 def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
-    plano = planos[plano_nome]
+    plano = planos.get(plano_nome)
+    if not plano:
+        return 0.0, 0.0, 0.0, 0.0, 0.0
+        
     tipo = plano.get("tipo", "fatias")
     taxa_superavit = plano.get("superavit", 0.0)
     
@@ -192,7 +195,10 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
 
 
 def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
-    plano = planos[plano_nome]
+    plano = planos.get(plano_nome)
+    if not plano:
+        return 0.0
+        
     tipo = plano.get("tipo", "fatias")
     taxa_superavit = plano.get("superavit", 0.0)
     
@@ -403,15 +409,14 @@ elif menu_selecionado == "📂 Cálculo em Lote":
     st.title("📂 Cálculo em Lote")
     st.write("Baixe a planilha modelo, preencha as informações dos participantes e faça o upload para processar múltiplos cálculos de uma só vez.")
     
-    # 1. Gerar e disponibilizar a Planilha Modelo para Download
+    # Gerar a Planilha Modelo para Download (Baseada nas colunas que você enviou + opcionais)
     df_modelo = pd.DataFrame({
-        "Nome_Participante": ["João Silva", "Maria Santos", "Pedro Costa"],
         "Plano": ["FIESCPREV", "SENAI-PIPREV", "UNIVALIPrevidencia"],
-        "Salario_Participacao": [4500.00, 8000.00, 5200.00],
-        "Idade": [30, 45, 35],
-        "Aliquota_Opcional_Perc": [0.0, 0.0, 0.0],
-        "Univali_Categoria": ["-", "-", "Migrante"],
-        "Univali_Tipo": ["-", "-", "Normal"]
+        "Salário Bruto": [4500.00, 8000.00, 5200.00],
+        "Idade (Opcional)": [30, 45, 35],
+        "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0],
+        "Univali Categoria (Opcional)": ["-", "-", "Migrante"],
+        "Univali Tipo (Opcional)": ["-", "-", "Normal"]
     })
     
     buffer_modelo = io.BytesIO()
@@ -419,7 +424,7 @@ elif menu_selecionado == "📂 Cálculo em Lote":
         df_modelo.to_excel(writer, index=False, sheet_name="Modelo_Previsc")
     
     st.download_button(
-        label="📥 Baixar Planilha Modelo (Excel)", 
+        label="📥 Baixar Planilha Modelo", 
         data=buffer_modelo.getvalue(), 
         file_name="modelo_calculo_lote.xlsx", 
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -427,7 +432,7 @@ elif menu_selecionado == "📂 Cálculo em Lote":
     
     st.divider()
     
-    # 2. Upload da Planilha Preenchida pelo Usuário
+    # Upload da Planilha Preenchida pelo Usuário
     st.subheader("Processar Base de Dados")
     arquivo_upload = st.file_uploader("Faça o upload da planilha preenchida (.xlsx)", type=["xlsx"])
     
@@ -435,20 +440,19 @@ elif menu_selecionado == "📂 Cálculo em Lote":
         try:
             df_lote = pd.read_excel(arquivo_upload)
             
-            # Executar cálculos linha por linha
             resultados = []
             for idx, row in df_lote.iterrows():
                 plano = str(row.get("Plano", "")).strip()
                 if plano in planos:
-                    # Capturar variáveis com validação de nulos
-                    salario = float(row.get("Salario_Participacao", 0.0)) if pd.notna(row.get("Salario_Participacao")) else 0.0
-                    idade = int(row.get("Idade", 30)) if pd.notna(row.get("Idade")) else 30
+                    # Lê os dados, usando "Salário Bruto" como base
+                    salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
                     
-                    aliq_bruta = row.get("Aliquota_Opcional_Perc", 0.0)
+                    # Leitura de campos opcionais (se não existirem, usa o padrão)
+                    idade = int(row.get("Idade (Opcional)", 30)) if "Idade (Opcional)" in df_lote.columns and pd.notna(row.get("Idade (Opcional)")) else 30
+                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote.columns else 0.0
                     aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
-                    
-                    univ_cat = str(row.get("Univali_Categoria", "Migrante")).strip()
-                    univ_tipo = str(row.get("Univali_Tipo", "Normal")).strip()
+                    univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote.columns else "Migrante"
+                    univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote.columns else "Normal"
                     
                     # Calcular (Pega apenas o primeiro retorno: a contribuição final a pagar)
                     total_pagar = calcular_contribuicao(plano, salario, aliq, univ_cat, univ_tipo, idade)[0]
@@ -462,7 +466,7 @@ elif menu_selecionado == "📂 Cálculo em Lote":
             st.success("Cálculo em lote finalizado com sucesso! Veja a prévia abaixo e faça o download do resultado.")
             st.dataframe(df_lote, use_container_width=True)
             
-            # 3. Gerar arquivo de Resultado para Download
+            # Gerar arquivo de Resultado para Download
             buffer_resultado = io.BytesIO()
             with pd.ExcelWriter(buffer_resultado, engine='openpyxl') as writer:
                 df_lote.to_excel(writer, index=False, sheet_name="Resultados_Previsc")
