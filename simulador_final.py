@@ -3,7 +3,6 @@ import streamlit as st
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
 # =================================================================
-# O layout "centered" mantém o aplicativo no meio da tela
 st.set_page_config(page_title="Simulador Previsc", page_icon="🏢", layout="centered")
 
 st.markdown("""
@@ -19,6 +18,14 @@ st.markdown("""
         font-weight: bold; color: #1B365D;
     }
     hr { border-color: #1B365D; }
+    
+    /* Personalizando os cartões de métricas para ficarem mais bonitos */
+    div[data-testid="metric-container"] {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 15px;
+        border-radius: 8px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -334,16 +341,24 @@ with aba_normal:
                 st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
             elif plano_selecionado == "PREVIFIEA":
                 st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
-                st.markdown(f"**Fatia Base (Até 0,5 UP):** R$ {f1:,.2f} &nbsp;|&nbsp; **Fatias Intermédias:** R$ {f2:,.2f} &nbsp;|&nbsp; **Fatia Topo (Acima de 3 UPs):** R$ {f3:,.2f}")
+                col_f1, col_f2, col_f3 = st.columns(3)
+                col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {f1:,.2f}")
+                col_f2.metric("Fatias Intermédias", f"R$ {f2:,.2f}")
+                col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {f3:,.2f}")
             else:
                 st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
                 if superavit > 0:
                     st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {superavit:,.2f}**")
                     
                 if f3 > 0:
-                    st.markdown(f"**Fatia 1:** R$ {f1:,.2f} &nbsp;|&nbsp; **Fatia 2:** R$ {f2:,.2f} &nbsp;|&nbsp; **Fatia 3/Excedente:** R$ {f3:,.2f}")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    col_f1.metric("Fatia 1", f"R$ {f1:,.2f}")
+                    col_f2.metric("Fatia 2", f"R$ {f2:,.2f}")
+                    col_f3.metric("Fatia 3 (Excedente)", f"R$ {f3:,.2f}")
                 elif f2 > 0:
-                    st.markdown(f"**Fatia 1 (Até Teto):** R$ {f1:,.2f} &nbsp;|&nbsp; **Fatia 2 (Excedente):** R$ {f2:,.2f}")
+                    col_f1, col_f2 = st.columns(2)
+                    col_f1.metric("Fatia 1 (Até Teto)", f"R$ {f1:,.2f}")
+                    col_f2.metric("Fatia 2 (Excedente)", f"R$ {f2:,.2f}")
         else:
             st.warning("Insira um salário válido.")
 
