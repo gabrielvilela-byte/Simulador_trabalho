@@ -344,7 +344,7 @@ if menu_selecionado == "📊 Simulador Individual":
 
     st.divider()
 
-    aba_normal, aba_reversa = st.tabs(["📊 Simulador Normal", "🔍 Cálculo de Salário"])
+    aba_normal, aba_reversa = st.tabs(["📊 Cálculo de Contribuição", "🔍 Cálculo de Salário"])
 
     with aba_normal:
         st.subheader("Calcular Contribuição")
