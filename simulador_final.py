@@ -28,6 +28,7 @@ planos = {
     "FIESCPREV": {"ur": 716.54, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tipo": "fatias"},
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tipo": "fatias"},
     "SENACPREV": {"ur": 699.76, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tipo": "fatias"},
+    "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "tipo": "fatias_triplas_senai"},
     "PREVISC SENAI-MA": {"ur": 560.37, "teto1_urs": 4.5, "teto2_urs": 9.0, "aliq_1": 0.030, "aliq_2": 0.05, "aliq_3": 0.23, "tipo": "fatias_triplas_senai"},
     "PREVISC SISTEMA FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.03, "aliq_2": 0.075, "tipo": "fatias"},
     "FECOMERCIO": {"ur": 504.97, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tipo": "fatias"},
@@ -75,9 +76,9 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
 
     if tipo == "fatias_quadruplas_fiea":
         up = plano["ur"]
-        teto1 = up * 0.5   # Até 0.5 UP
-        teto2 = up         # Até 1.0 UP
-        teto3 = up * 3.0   # Até 3.0 UP
+        teto1 = up * 0.5   
+        teto2 = up         
+        teto3 = up * 3.0   
         
         f1 = f2 = f3 = f4 = 0.0
         
@@ -302,6 +303,9 @@ with aba_normal:
             
         if plano_dados.get("tipo") == "unerjprev_idade":
             st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {plano_dados['ur']:,.2f}")
+            
+        if plano_selecionado == "SENAI-PIPREV":
+            st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {plano_dados['ur']:,.2f}")
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
