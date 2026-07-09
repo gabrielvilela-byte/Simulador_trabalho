@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import io
 
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
@@ -20,7 +21,6 @@ st.markdown("""
     }
     hr { border-color: #1B365D; }
     
-    /* Personalizando os cartões de métricas para ficarem mais bonitos */
     div[data-testid="metric-container"] {
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
@@ -287,14 +287,14 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
 st.sidebar.title("📌 Menu de Navegação")
 menu_selecionado = st.sidebar.radio(
     "Escolha a ferramenta:",
-    ["📊 Simulador de Contribuição", "📖 Regras e Bases de Cálculo"]
+    ["📊 Simulador de Contribuição", "📂 Cálculo em Lote", "📖 Regras e Bases de Cálculo"]
 )
 st.sidebar.divider()
 st.sidebar.info("Sistema interno desenvolvido para cálculos previdenciários precisos e consulta de regras vigentes.")
 
 
 # =================================================================
-# 5. TELA 1: SIMULADOR DE CONTRIBUIÇÃO
+# 5. TELA 1: SIMULADOR DE CONTRIBUIÇÃO (INDIVIDUAL)
 # =================================================================
 if menu_selecionado == "📊 Simulador de Contribuição":
     st.title("🏢 Simulador Previsc")
@@ -397,13 +397,94 @@ if menu_selecionado == "📊 Simulador de Contribuição":
 
 
 # =================================================================
-# 6. TELA 2: REGRAS E BASES DE CÁLCULO (TABELA EXPLICATIVA)
+# 6. TELA 2: CÁLCULO EM LOTE (PLANILHA EXCEL)
+# =================================================================
+elif menu_selecionado == "📂 Cálculo em Lote":
+    st.title("📂 Cálculo em Lote")
+    st.write("Baixe a planilha modelo, preencha as informações dos participantes e faça o upload para processar múltiplos cálculos de uma só vez.")
+    
+    # 1. Gerar e disponibilizar a Planilha Modelo para Download
+    df_modelo = pd.DataFrame({
+        "Nome_Participante": ["João Silva", "Maria Santos", "Pedro Costa"],
+        "Plano": ["FIESCPREV", "SENAI-PIPREV", "UNIVALIPrevidencia"],
+        "Salario_Participacao": [4500.00, 8000.00, 5200.00],
+        "Idade": [30, 45, 35],
+        "Aliquota_Opcional_Perc": [0.0, 0.0, 0.0],
+        "Univali_Categoria": ["-", "-", "Migrante"],
+        "Univali_Tipo": ["-", "-", "Normal"]
+    })
+    
+    buffer_modelo = io.BytesIO()
+    with pd.ExcelWriter(buffer_modelo, engine='openpyxl') as writer:
+        df_modelo.to_excel(writer, index=False, sheet_name="Modelo_Previsc")
+    
+    st.download_button(
+        label="📥 Baixar Planilha Modelo (Excel)", 
+        data=buffer_modelo.getvalue(), 
+        file_name="modelo_calculo_lote.xlsx", 
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+    st.divider()
+    
+    # 2. Upload da Planilha Preenchida pelo Usuário
+    st.subheader("Processar Base de Dados")
+    arquivo_upload = st.file_uploader("Faça o upload da planilha preenchida (.xlsx)", type=["xlsx"])
+    
+    if arquivo_upload is not None:
+        try:
+            df_lote = pd.read_excel(arquivo_upload)
+            
+            # Executar cálculos linha por linha
+            resultados = []
+            for idx, row in df_lote.iterrows():
+                plano = str(row.get("Plano", "")).strip()
+                if plano in planos:
+                    # Capturar variáveis com validação de nulos
+                    salario = float(row.get("Salario_Participacao", 0.0)) if pd.notna(row.get("Salario_Participacao")) else 0.0
+                    idade = int(row.get("Idade", 30)) if pd.notna(row.get("Idade")) else 30
+                    
+                    aliq_bruta = row.get("Aliquota_Opcional_Perc", 0.0)
+                    aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
+                    
+                    univ_cat = str(row.get("Univali_Categoria", "Migrante")).strip()
+                    univ_tipo = str(row.get("Univali_Tipo", "Normal")).strip()
+                    
+                    # Calcular (Pega apenas o primeiro retorno: a contribuição final a pagar)
+                    total_pagar = calcular_contribuicao(plano, salario, aliq, univ_cat, univ_tipo, idade)[0]
+                    resultados.append(total_pagar)
+                else:
+                    resultados.append("Plano Inválido/Não Encontrado")
+            
+            # Adicionar a coluna de resultado ao DataFrame
+            df_lote["Contribuição Sugerida (R$)"] = resultados
+            
+            st.success("Cálculo em lote finalizado com sucesso! Veja a prévia abaixo e faça o download do resultado.")
+            st.dataframe(df_lote, use_container_width=True)
+            
+            # 3. Gerar arquivo de Resultado para Download
+            buffer_resultado = io.BytesIO()
+            with pd.ExcelWriter(buffer_resultado, engine='openpyxl') as writer:
+                df_lote.to_excel(writer, index=False, sheet_name="Resultados_Previsc")
+                
+            st.download_button(
+                label="📤 Baixar Resultados Processados", 
+                data=buffer_resultado.getvalue(), 
+                file_name="resultado_calculo_lote.xlsx", 
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+        except Exception as e:
+            st.error(f"Erro ao ler a planilha. Certifique-se de que o arquivo segue o formato do modelo. Detalhe: {e}")
+
+
+# =================================================================
+# 7. TELA 3: REGRAS E BASES DE CÁLCULO (TABELA EXPLICATIVA)
 # =================================================================
 elif menu_selecionado == "📖 Regras e Bases de Cálculo":
     st.title("📖 Regras e Bases de Cálculo")
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
-    # Criando os dados da tabela formatados
     dados_tabela = [
         {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,54", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
         {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
@@ -423,5 +504,4 @@ elif menu_selecionado == "📖 Regras e Bases de Cálculo":
         {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
     ]
     
-    # Exibindo como uma tabela nativa e estilizada do Streamlit
     st.dataframe(pd.DataFrame(dados_tabela), use_container_width=True, hide_index=True)
