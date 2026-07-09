@@ -37,6 +37,7 @@ planos = {
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.02, "aliq_2": 0.14, "tipo": "fatias"},
     "SESC SC (SESCPREV)": {"ur": 878.70, "teto_urs": 10.0, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "up_sem_teto"},
+    "PREVIFIEA": {"ur": 5998.34, "aliq_1": 0.03, "aliq_2": 0.05, "aliq_3": 0.12, "aliq_4": 0.15, "tipo": "fatias_quadruplas_fiea"},
     "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"},
     "UNERJPREV": {"ur": 8475.55, "teto_urs": 1.0, "aliq_1": 0.0025, "tipo": "unerjprev_idade"} 
 }
@@ -72,26 +73,43 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         total = salario * aliq
         return total, total, 0.0, 0.0 
 
+    if tipo == "fatias_quadruplas_fiea":
+        up = plano["ur"]
+        teto1 = up * 0.5   # Até 0.5 UP
+        teto2 = up         # Até 1.0 UP
+        teto3 = up * 3.0   # Até 3.0 UP
+        
+        f1 = f2 = f3 = f4 = 0.0
+        
+        if salario <= teto1:
+            f1 = salario * plano["aliq_1"]
+        elif salario <= teto2:
+            f1 = teto1 * plano["aliq_1"]
+            f2 = (salario - teto1) * plano["aliq_2"]
+        elif salario <= teto3:
+            f1 = teto1 * plano["aliq_1"]
+            f2 = (teto2 - teto1) * plano["aliq_2"]
+            f3 = (salario - teto2) * plano["aliq_3"]
+        else:
+            f1 = teto1 * plano["aliq_1"]
+            f2 = (teto2 - teto1) * plano["aliq_2"]
+            f3 = (teto3 - teto2) * plano["aliq_3"]
+            f4 = (salario - teto3) * plano["aliq_4"]
+            
+        total = f1 + f2 + f3 + f4
+        # Retornamos o total, f1, e combinamos as fatias do meio/topo para visualização na tela
+        return total, f1, (f2 + f3), f4
+
     if tipo == "fatias_univali":
         teto_rs = plano["ur"] * plano["teto_urs"]
         
-        # Lógica estruturada para as regras de idade da Univali
         if univali_migrante == "Migrante":
-            if idade <= 30:
-                aliq_2 = 0.14
-            else:
-                aliq_2 = 0.14
-        else: # Não Migrante
+            aliq_2 = 0.14
+        else: 
             if univali_tipo == "Reduzida":
-                if idade <= 35:
-                    aliq_2 = 0.14
-                else:
-                    aliq_2 = 0.14
-            else: # Normal
-                if idade <= 35:
-                    aliq_2 = 0.17
-                else:
-                    aliq_2 = 0.17
+                aliq_2 = 0.14
+            else: 
+                aliq_2 = 0.17
                     
         if salario <= teto_rs:
             f1 = salario * plano["aliq_1"]
@@ -175,26 +193,36 @@ def calcular_salario_reverso(plano_nome, contribuicao, aliq_escolhida=None, univ
                 aliq = 0.06
             return contribuicao / aliq
 
+    if tipo == "fatias_quadruplas_fiea":
+        up = plano["ur"]
+        teto1 = up * 0.5
+        teto2 = up
+        teto3 = up * 3.0
+        
+        max_f1 = teto1 * plano["aliq_1"]
+        max_f2 = (teto2 - teto1) * plano["aliq_2"]
+        max_f3 = (teto3 - teto2) * plano["aliq_3"]
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        elif contribuicao <= (max_f1 + max_f2):
+            return teto1 + ((contribuicao - max_f1) / plano["aliq_2"])
+        elif contribuicao <= (max_f1 + max_f2 + max_f3):
+            return teto2 + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
+        else:
+            return teto3 + ((contribuicao - max_f1 - max_f2 - max_f3) / plano["aliq_4"])
+
     if tipo == "fatias_univali":
         teto_rs = plano["ur"] * plano["teto_urs"]
         max_f1 = teto_rs * plano["aliq_1"]
         
         if univali_migrante == "Migrante":
-            if idade <= 30:
-                aliq_2 = 0.14
-            else:
-                aliq_2 = 0.14
+            aliq_2 = 0.14
         else:
             if univali_tipo == "Reduzida":
-                if idade <= 35:
-                    aliq_2 = 0.14
-                else:
-                    aliq_2 = 0.14
+                aliq_2 = 0.14
             else:
-                if idade <= 35:
-                    aliq_2 = 0.17
-                else:
-                    aliq_2 = 0.17
+                aliq_2 = 0.17
                     
         if contribuicao <= max_f1:
             return contribuicao / plano["aliq_1"]
@@ -270,6 +298,9 @@ with aba_normal:
             aliq_input = st.number_input("Alíquota de Contribuição (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5)
             aliq_escolhida = aliq_input / 100
             
+        if plano_selecionado == "PREVIFIEA":
+            st.info(f"A UP atual adotada para o plano PreviFIEA é de R$ {plano_dados['ur']:,.2f}")
+            
         if plano_dados.get("tipo") == "unerjprev_idade":
             st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {plano_dados['ur']:,.2f}")
         
@@ -281,32 +312,9 @@ with aba_normal:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
                 elif plano_dados["tipo"] in ["up_sem_teto", "unerjprev_idade"]:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                elif plano_selecionado == "PREVIFIEA":
+                    st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
+                    # Como f2 retorna a soma das faixas intermédias na FIEA, mostramos o fatiamento simplificado
+                    st.write(f"**Fatia Base (Até 0,5 UP):** R$ {f1:,.2f} | **Fatias Intermédias:** R$ {f2:,.2f} | **Fatia Topo (Acima de 3 UPs):** R$ {f3:,.2f}")
                 else:
-                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
-                    if f3 > 0:
-                        st.write(f"**Fatia 1:** R$ {f1:,.2f} | **Fatia 2:** R$ {f2:,.2f} | **Fatia 3/Excedente:** R$ {f3:,.2f}")
-                    elif f2 > 0:
-                        st.write(f"**Fatia 1 (Até Teto):** R$ {f1:,.2f} | **Fatia 2 (Excedente):** R$ {f2:,.2f}")
-            else:
-                st.warning("Insira um salário válido.")
-
-with aba_reversa:
-    col3, col4 = st.columns(2)
-    with col3:
-        st.subheader("Engenharia Reversa")
-        contrib_input = st.number_input("Digite a Contribuição Alvo (R$):", min_value=0.0, value=0.0, step=10.0, format="%.2f")
-        
-        aliq_escolhida_rev = None
-        if plano_dados["tipo"] == "up_sem_teto":
-            aliq_input_rev = st.number_input("Alíquota Utilizada (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5, key="aliq_rev")
-            aliq_escolhida_rev = aliq_input_rev / 100
-            
-        if st.button("Descobrir Salário", type="primary"):
-            if contrib_input > 0:
-                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input)
-                if salario_descob == 0:
-                    st.info("A engenharia reversa para este plano específico requer alinhamento de variáveis complexas e fatias de dedução.")
-                else:
-                    st.success(f"**Salário Exato Necessário:** R$ {salario_descob:,.2f}")
-            else:
-                st.warning("Insira uma contribuição válida.")
+                    st.success(f
