@@ -1,9 +1,10 @@
 import streamlit as st
+import pandas as pd
 
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
 # =================================================================
-st.set_page_config(page_title="Simulador Previsc", page_icon="🏢", layout="centered")
+st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="centered")
 
 st.markdown("""
     <style>
@@ -31,7 +32,7 @@ st.markdown("""
 
 
 # =================================================================
-# 2. BANCO DE DADOS DOS PLANOS ATUALIZADO
+# 2. BANCO DE DADOS DOS PLANOS
 # =================================================================
 planos = {
     "FIESCPREV": {"ur": 716.54, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tipo": "fatias"},
@@ -281,102 +282,146 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
 
 
 # =================================================================
-# 4. INTERFACE VISUAL 
+# 4. NAVEGAÇÃO LATERAL (SIDEBAR)
 # =================================================================
-st.title("🏢 Simulador Previsc")
-st.write("Base de cálculos atualizada com as regras de Custeio oficiais.")
+st.sidebar.title("📌 Menu de Navegação")
+menu_selecionado = st.sidebar.radio(
+    "Escolha a ferramenta:",
+    ["📊 Simulador de Contribuição", "📖 Regras e Bases de Cálculo"]
+)
+st.sidebar.divider()
+st.sidebar.info("Sistema interno desenvolvido para cálculos previdenciários precisos e consulta de regras vigentes.")
 
-plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
-plano_dados = planos[plano_selecionado]
 
-# Controles Dinâmicos Exclusivos
-univali_migrante = "Migrante"
-univali_tipo = "Normal"
-idade_input = 30
+# =================================================================
+# 5. TELA 1: SIMULADOR DE CONTRIBUIÇÃO
+# =================================================================
+if menu_selecionado == "📊 Simulador de Contribuição":
+    st.title("🏢 Simulador Previsc")
+    st.write("Selecione o plano abaixo para calcular a contribuição ideal ou realizar a engenharia reversa do salário.")
 
-if plano_selecionado == "UNIVALIPrevidencia":
-    col_u1, col_u2, col_u3 = st.columns(3)
-    with col_u1:
-        univali_migrante = st.radio("Categoria:", ["Migrante", "Não Migrante"])
-    with col_u2:
-        univali_tipo = st.radio("Contribuição:", ["Normal", "Reduzida"])
-    with col_u3:
-        idade_input = st.number_input("Idade:", min_value=16, max_value=80, value=30, step=1)
-elif plano_dados.get("tipo") == "unerjprev_idade":
-    idade_input = st.number_input("Idade do Participante na Adesão:", min_value=16, max_value=80, value=30, step=1)
+    plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
+    plano_dados = planos[plano_selecionado]
 
-st.divider()
+    # Controles Dinâmicos Exclusivos
+    univali_migrante = "Migrante"
+    univali_tipo = "Normal"
+    idade_input = 30
 
-aba_normal, aba_reversa = st.tabs(["📊 Simulador Normal", "🔍 Simulador Reverso"])
+    if plano_selecionado == "UNIVALIPrevidencia":
+        col_u1, col_u2, col_u3 = st.columns(3)
+        with col_u1:
+            univali_migrante = st.radio("Categoria:", ["Migrante", "Não Migrante"])
+        with col_u2:
+            univali_tipo = st.radio("Contribuição:", ["Normal", "Reduzida"])
+        with col_u3:
+            idade_input = st.number_input("Idade:", min_value=16, max_value=80, value=30, step=1)
+    elif plano_dados.get("tipo") == "unerjprev_idade":
+        idade_input = st.number_input("Idade do Participante na Adesão:", min_value=16, max_value=80, value=30, step=1)
 
-with aba_normal:
-    st.subheader("Calcular Contribuição")
-    salario_input = st.number_input("Digite o Salário de Participação (R$):", min_value=0.0, value=0.0, step=100.0, format="%.2f")
-    
-    aliq_escolhida = None
-    if plano_dados["tipo"] == "up_sem_teto":
-        st.info(f"A UP atual deste plano é de R$ {plano_dados['ur']:,.2f}")
-        if salario_input > 0:
-            qtd_ups = salario_input / plano_dados["ur"]
-            st.write(f"O seu salário equivale a **{qtd_ups:,.2f} UPs**.")
-        aliq_input = st.number_input("Alíquota de Contribuição (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5)
-        aliq_escolhida = aliq_input / 100
+    st.divider()
+
+    aba_normal, aba_reversa = st.tabs(["📊 Simulador Normal", "🔍 Simulador Reverso"])
+
+    with aba_normal:
+        st.subheader("Calcular Contribuição")
+        salario_input = st.number_input("Digite o Salário de Participação (R$):", min_value=0.0, value=0.0, step=100.0, format="%.2f")
         
-    if plano_selecionado == "PREVIFIEA":
-        st.info(f"A UP atual adotada para o plano PreviFIEA é de R$ {plano_dados['ur']:,.2f}")
-        
-    if plano_dados.get("tipo") == "unerjprev_idade":
-        st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {plano_dados['ur']:,.2f}")
-        
-    if plano_selecionado == "SENAI-PIPREV":
-        st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {plano_dados['ur']:,.2f}")
-    
-    if st.button("Gerar Cálculo", type="primary"):
-        if salario_input > 0:
-            total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input)
+        aliq_escolhida = None
+        if plano_dados["tipo"] == "up_sem_teto":
+            st.info(f"A UP atual deste plano é de R$ {plano_dados['ur']:,.2f}")
+            if salario_input > 0:
+                qtd_ups = salario_input / plano_dados["ur"]
+                st.write(f"O seu salário equivale a **{qtd_ups:,.2f} UPs**.")
+            aliq_input = st.number_input("Alíquota de Contribuição (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5)
+            aliq_escolhida = aliq_input / 100
             
-            if total == 0:
-                st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
-            elif plano_dados["tipo"] in ["up_sem_teto", "unerjprev_idade"]:
-                st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
-            elif plano_selecionado == "PREVIFIEA":
-                st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
-                col_f1, col_f2, col_f3 = st.columns(3)
-                col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {f1:,.2f}")
-                col_f2.metric("Fatias Intermédias", f"R$ {f2:,.2f}")
-                col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {f3:,.2f}")
-            else:
-                st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
-                if superavit > 0:
-                    st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {superavit:,.2f}**")
-                    
-                if f3 > 0:
-                    col_f1, col_f2, col_f3 = st.columns(3)
-                    col_f1.metric("Fatia 1", f"R$ {f1:,.2f}")
-                    col_f2.metric("Fatia 2", f"R$ {f2:,.2f}")
-                    col_f3.metric("Fatia 3 (Excedente)", f"R$ {f3:,.2f}")
-                elif f2 > 0:
-                    col_f1, col_f2 = st.columns(2)
-                    col_f1.metric("Fatia 1 (Até Teto)", f"R$ {f1:,.2f}")
-                    col_f2.metric("Fatia 2 (Excedente)", f"R$ {f2:,.2f}")
-        else:
-            st.warning("Insira um salário válido.")
-
-with aba_reversa:
-    st.subheader("Engenharia Reversa")
-    contrib_input = st.number_input("Digite a Contribuição Alvo (R$):", min_value=0.0, value=0.0, step=10.0, format="%.2f")
-    
-    aliq_escolhida_rev = None
-    if plano_dados["tipo"] == "up_sem_teto":
-        aliq_input_rev = st.number_input("Alíquota Utilizada (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5, key="aliq_rev")
-        aliq_escolhida_rev = aliq_input_rev / 100
+        if plano_selecionado == "PREVIFIEA":
+            st.info(f"A UP atual adotada para o plano PreviFIEA é de R$ {plano_dados['ur']:,.2f}")
+            
+        if plano_dados.get("tipo") == "unerjprev_idade":
+            st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {plano_dados['ur']:,.2f}")
+            
+        if plano_selecionado == "SENAI-PIPREV":
+            st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {plano_dados['ur']:,.2f}")
         
-    if st.button("Descobrir Salário", type="primary"):
-        if contrib_input > 0:
-            salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input)
-            if salario_descob == 0:
-                st.info("A engenharia reversa para este plano específico requer alinhamento de variáveis complexas e fatias de dedução.")
+        if st.button("Gerar Cálculo", type="primary"):
+            if salario_input > 0:
+                total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input)
+                
+                if total == 0:
+                    st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
+                elif plano_dados["tipo"] in ["up_sem_teto", "unerjprev_idade"]:
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                elif plano_selecionado == "PREVIFIEA":
+                    st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {f1:,.2f}")
+                    col_f2.metric("Fatias Intermédias", f"R$ {f2:,.2f}")
+                    col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {f3:,.2f}")
+                else:
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    if superavit > 0:
+                        st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {superavit:,.2f}**")
+                        
+                    if f3 > 0:
+                        col_f1, col_f2, col_f3 = st.columns(3)
+                        col_f1.metric("Fatia 1", f"R$ {f1:,.2f}")
+                        col_f2.metric("Fatia 2", f"R$ {f2:,.2f}")
+                        col_f3.metric("Fatia 3 (Excedente)", f"R$ {f3:,.2f}")
+                    elif f2 > 0:
+                        col_f1, col_f2 = st.columns(2)
+                        col_f1.metric("Fatia 1 (Até Teto)", f"R$ {f1:,.2f}")
+                        col_f2.metric("Fatia 2 (Excedente)", f"R$ {f2:,.2f}")
             else:
-                st.success(f"**Salário Exato Necessário:** R$ {salario_descob:,.2f}")
-        else:
-            st.warning("Insira uma contribuição válida.")
+                st.warning("Insira um salário válido.")
+
+    with aba_reversa:
+        st.subheader("Engenharia Reversa")
+        contrib_input = st.number_input("Digite a Contribuição Alvo (R$):", min_value=0.0, value=0.0, step=10.0, format="%.2f")
+        
+        aliq_escolhida_rev = None
+        if plano_dados["tipo"] == "up_sem_teto":
+            aliq_input_rev = st.number_input("Alíquota Utilizada (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5, key="aliq_rev")
+            aliq_escolhida_rev = aliq_input_rev / 100
+            
+        if st.button("Descobrir Salário", type="primary"):
+            if contrib_input > 0:
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input)
+                if salario_descob == 0:
+                    st.info("A engenharia reversa para este plano específico requer alinhamento de variáveis complexas e fatias de dedução.")
+                else:
+                    st.success(f"**Salário Exato Necessário:** R$ {salario_descob:,.2f}")
+            else:
+                st.warning("Insira uma contribuição válida.")
+
+
+# =================================================================
+# 6. TELA 2: REGRAS E BASES DE CÁLCULO (TABELA EXPLICATIVA)
+# =================================================================
+elif menu_selecionado == "📖 Regras e Bases de Cálculo":
+    st.title("📖 Regras e Bases de Cálculo")
+    st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
+    
+    # Criando os dados da tabela formatados
+    dados_tabela = [
+        {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,54", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
+        {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
+        {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "699,76", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
+        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Fatias Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit (7,28%)"},
+        {"Plano": "PREVISC SENAI-MA", "Indexador": "UR", "Valor (R$)": "560,37", "Regra de Cálculo": "Fatias Triplas: 3% (Até 4,5 UR) | 5% (Até 9 UR) | 23% (Acima)"},
+        {"Plano": "PREVISC SISTEMA FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
+        {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "504,97", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
+        {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "688,24", "Regra de Cálculo": "Fatias: 2% (Até 12,06 UR) | 7,25% (Acima)"},
+        {"Plano": "PREVISC", "Indexador": "UR", "Valor (R$)": "710,76", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
+        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "623,33", "Regra de Cálculo": "Fatia Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Idade"},
+        {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fatias: 2% (Até 1 SP) | 14% (Acima)"},
+        {"Plano": "SESC SC (SESCPREV)", "Indexador": "UR", "Valor (R$)": "878,70", "Regra de Cálculo": "Fatias Dedutíveis: 1,39% (Até 10) | 5,58% (10 a 11,42) | 13,66% (Acima) com abatimentos fixos"},
+        {"Plano": "LUNELLIPREV", "Indexador": "UP", "Valor (R$)": "535,87", "Regra de Cálculo": "Livre Escolha (% Fixo sem Teto sobre a base inteira)"},
+        {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "5.998,34", "Regra de Cálculo": "Fatias Cascata (SRC): 3% (Até 0,5 UP) | 5% (0,5 a 1) | 12% (1 a 3) | 15% (Acima)"},
+        {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo conforme a idade"},
+        {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
+    ]
+    
+    # Exibindo como uma tabela nativa e estilizada do Streamlit
+    st.dataframe(pd.DataFrame(dados_tabela), use_container_width=True, hide_index=True)
