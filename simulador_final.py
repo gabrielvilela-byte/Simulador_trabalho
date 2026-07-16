@@ -46,7 +46,7 @@ planos = {
     "PREVISC": {"ur": 710.76, "teto_urs": 7.0, "aliq_1": 0.03, "aliq_2": 0.14, "tipo": "fatias"},
     "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tipo": "fatias_univali"},
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.02, "aliq_2": 0.14, "tipo": "fatias"},
-    "SESC SC (SESCPREV)": {"ur": 878.70, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
+    "SESC SC (SESCPREV)": {"ur": 878.70, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "up_sem_teto"},
     "PREVIFIEA": {"ur": 5998.34, "aliq_1": 0.03, "aliq_2": 0.05, "aliq_3": 0.12, "aliq_4": 0.15, "tipo": "fatias_quadruplas_fiea"},
     "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"},
@@ -58,7 +58,8 @@ apelidos_planilha = {
     "SESC SC": "SESC SC (SESCPREV)",
     "SENAI-PI": "SENAI-PIPREV",
     "SENAI-MA": "PREVISC SENAI-MA",
-    "FIEMA": "PREVISC SENAI-MA"
+    "FIEMA": "PREVISC SENAI-MA",
+    "SESI-PI": "SESI-PIPREV"
 }
 
 # =================================================================
@@ -152,10 +153,9 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
 
     if tipo == "sesc_triplo":
         ur = plano["ur"]
-        teto1_rs = ur * 10.0
-        teto2_rs = ur * 11.4288
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
         
-        # O Sesc utiliza fórmula de Parcela de Dedução igual ao INSS (Base * Aliq - Fator*UR)
         if salario <= teto1_rs:
             total_bruto = salario * plano["aliq_1"]
             f1 = total_bruto
@@ -195,7 +195,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         superavit = total_bruto * taxa_superavit
         return (total_bruto - superavit), f1, f2, f3, superavit
 
-    # Categoria Fatias (Padrão)
+    # Categoria Fatias (Padrão) - Usada também pelo SESI-PIPREV
     teto_rs = plano["ur"] * plano["teto_urs"]
     if salario <= teto_rs:
         f1 = salario * plano["aliq_1"]
@@ -217,7 +217,6 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
     tipo = plano.get("tipo", "fatias")
     taxa_superavit = plano.get("superavit", 0.0)
     
-    # Se houver superávit, o valor recebido na tela (líquido) é "inflado" para o bruto original
     contribuicao = contribuicao_liquida / (1 - taxa_superavit)
     
     if tipo in ["fixo"]:
@@ -281,19 +280,21 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
 
     if tipo == "sesc_triplo":
         ur = plano["ur"]
-        teto1_rs = ur * 10.0
-        teto2_rs = ur * 11.4288
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
         
-        # Limites cravados baseados na fórmula de dedução
         max_c1 = teto1_rs * plano["aliq_1"]
         max_c2 = (teto2_rs * plano["aliq_2"]) - (0.4190 * ur)
         
         if contribuicao <= max_c1:
-            return contribuicao / plano["aliq_1"]
+            salario = contribuicao / plano["aliq_1"]
         elif contribuicao <= max_c2:
-            return (contribuicao + (0.4190 * ur)) / plano["aliq_2"]
+            salario = (contribuicao + (0.4190 * ur)) / plano["aliq_2"]
         else:
-            return (contribuicao + (1.3424 * ur)) / plano["aliq_3"]
+            salario = (contribuicao + (1.3424 * ur)) / plano["aliq_3"]
+            
+        # Limpando sujeira de arredondamento
+        return round(salario)
 
     if tipo == "fatias_triplas_senai":
         ur = plano["ur"]
@@ -309,7 +310,7 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
         else:
             return teto2_rs + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
 
-    # Categoria Fatias (Padrão)
+    # Categoria Fatias (Padrão) - Usada também pelo SESI-PIPREV
     teto_rs = plano["ur"] * plano["teto_urs"]
     max_f1 = teto_rs * plano["aliq_1"]
     if contribuicao <= max_f1:
@@ -389,6 +390,9 @@ if menu_selecionado == "📊 Simulador Individual":
             
         if plano_selecionado == "UNIVALIPrevidencia":
             st.info(f"A UR atual adotada para o plano UNIVALIPrevidencia é de R$ {plano_dados['ur']:,.2f}")
+            
+        if plano_selecionado == "SESI-PIPREV":
+            st.info(f"A SP atual adotada para o plano SESI-PI é de R$ {plano_dados['ur']:,.2f}")
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
