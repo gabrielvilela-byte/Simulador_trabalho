@@ -241,7 +241,6 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         elif faixa_opcao == "Faixa 6":
             a1, a2, a3, a4 = 0.0150, 0.0250, 0.0600, 0.0750
         else: 
-            # Faixa 1 Padrão
             a1, a2, a3, a4 = 0.0300, 0.0500, 0.1200, 0.1500
             
         f1 = f2 = f3 = f4 = 0.0
@@ -262,10 +261,8 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
             f4 = (salario - teto3) * a4
             
         total_bruto = f1 + f2 + f3 + f4
-        # Retorna f2+f3 mesclado no terceiro parametro para caber nos 3 cards da UI
         return total_bruto, f1, (f2 + f3), f4, 0.0
 
-    # Categoria Fatias (Padrão) - Usada também pelo SESI-PIPREV
     teto_rs = plano["ur"] * plano["teto_urs"]
     if salario <= teto_rs:
         f1 = salario * plano["aliq_1"]
@@ -287,7 +284,6 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
     tipo = plano.get("tipo", "fatias")
     taxa_superavit = plano.get("superavit", 0.0)
     
-    # Se houver superávit, o valor recebido na tela (líquido) é "inflado" para o bruto original
     contribuicao = contribuicao_liquida / (1 - taxa_superavit)
     
     if tipo in ["fixo"]:
@@ -363,8 +359,6 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
             salario = (contribuicao + (0.4190 * ur)) / plano["aliq_2"]
         else:
             salario = (contribuicao + (1.3424 * ur)) / plano["aliq_3"]
-            
-        # Limpando sujeira de arredondamento
         return round(salario)
 
     if tipo == "fatias_triplas_senai":
@@ -427,14 +421,13 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
         
         if contribuicao <= max_f1:
             return contribuicao / a1
-        elif contribuicao <= (max_f1 + max_f2):
+        elif contribuicao <= max_f1 + max_f2:
             return teto1 + ((contribuicao - max_f1) / a2)
-        elif contribuicao <= (max_f1 + max_f2 + max_f3):
+        elif contribuicao <= max_f1 + max_f2 + max_f3:
             return teto2 + ((contribuicao - max_f1 - max_f2) / a3)
         else:
             return teto3 + ((contribuicao - max_f1 - max_f2 - max_f3) / a4)
 
-    # Categoria Fatias (Padrão) - Usada também pelo SESI-PIPREV
     teto_rs = plano["ur"] * plano["teto_urs"]
     max_f1 = teto_rs * plano["aliq_1"]
     if contribuicao <= max_f1:
@@ -470,7 +463,6 @@ if menu_selecionado == "📊 Simulador Individual":
     plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
     plano_dados = planos[plano_selecionado]
 
-    # Controles Dinâmicos Exclusivos
     univali_migrante = "Migrante"
     univali_tipo = "Normal"
     idade_input = 30
@@ -523,30 +515,30 @@ if menu_selecionado == "📊 Simulador Individual":
         
         aliq_escolhida = None
         if plano_dados.get("tipo") == "up_sem_teto":
-            st.info(f"A UP atual deste plano é de R$ {plano_dados['ur']:,.2f}")
+            st.info(f"A UP atual deste plano é de R$ {formatar_br(plano_dados['ur'])}")
             if salario_input > 0:
                 qtd_ups = salario_input / plano_dados["ur"]
-                st.write(f"O seu salário equivale a **{qtd_ups:,.2f} UPs**.")
+                st.write(f"O seu salário equivale a **{formatar_br(qtd_ups)} UPs**.")
             aliq_input = st.number_input("Alíquota de Contribuição (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5)
             aliq_escolhida = aliq_input / 100
             
         if plano_selecionado == "PREVIFIEA":
-            st.info(f"A UP atual adotada para o plano PreviFIEA é de R$ {plano_dados['ur']:,.2f}")
+            st.info(f"A UP atual adotada para o plano PreviFIEA é de R$ {formatar_br(plano_dados['ur'])}")
             
         if plano_dados.get("tipo") == "unerjprev_idade":
-            st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {plano_dados['ur']:,.2f}")
+            st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {formatar_br(plano_dados['ur'])}")
             
         if plano_selecionado == "SENAI-PIPREV":
-            st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {plano_dados['ur']:,.2f}")
+            st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {formatar_br(plano_dados['ur'])}")
             
         if plano_selecionado == "UNIVALIPrevidencia":
-            st.info(f"A UR atual adotada para o plano UNIVALIPrevidencia é de R$ {plano_dados['ur']:,.2f}")
+            st.info(f"A UR atual adotada para o plano UNIVALIPrevidencia é de R$ {formatar_br(plano_dados['ur'])}")
             
         if plano_selecionado == "SESI-PIPREV":
-            st.info(f"A SP atual adotada para o plano SESI-PI é de R$ {plano_dados['ur']:,.2f}")
+            st.info(f"A SP atual adotada para o plano SESI-PI é de R$ {formatar_br(plano_dados['ur'])}")
 
         if plano_selecionado == "PREVFIEPA":
-            st.info(f"A UP atual adotada para o plano PREVFIEPA é de R$ {plano_dados['up']:,.2f}")
+            st.info(f"A UP atual adotada para o plano PREVFIEPA é de R$ {formatar_br(plano_dados['up'])}")
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
@@ -555,50 +547,50 @@ if menu_selecionado == "📊 Simulador Individual":
                 if total == 0:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
                 elif plano_dados.get("tipo") in ["up_sem_teto", "unerjprev_idade"]:
-                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    st.success(f"**Contribuição Sugerida:** R$ {formatar_br(total)}")
                 elif plano_selecionado == "PREVIFIEA":
-                    st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
+                    st.success(f"**Contribuição Sugerida (Cascata):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
-                    col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {f1:,.2f}")
-                    col_f2.metric("Fatias Intermédias", f"R$ {f2:,.2f}")
-                    col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {f3:,.2f}")
+                    col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Fatias Intermédias", f"R$ {formatar_br(f2)}")
+                    col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "PREVFIEPA":
-                    st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
+                    st.success(f"**Contribuição Sugerida (Cascata):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
-                    col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {f1:,.2f}")
-                    col_f2.metric("Fatias Intermédias (0,5 a 3 UPs)", f"R$ {f2:,.2f}")
-                    col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {f3:,.2f}")
+                    col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Fatias Intermédias (0,5 a 3 UPs)", f"R$ {formatar_br(f2)}")
+                    col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "PREVISC SENAI-MA":
-                    st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
+                    st.success(f"**Contribuição Sugerida (Cascata):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
-                    col_f1.metric("Fatia Base (Até R$ 2.521,45)", f"R$ {f1:,.2f}")
-                    col_f2.metric("Fatia Intermediária (Até R$ 5.042,89)", f"R$ {f2:,.2f}")
-                    col_f3.metric("Fatia Topo (Excedente)", f"R$ {f3:,.2f}")
+                    col_f1.metric("Fatia Base (Até R$ 2.521,45)", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Fatia Intermediária (Até R$ 5.042,89)", f"R$ {formatar_br(f2)}")
+                    col_f3.metric("Fatia Topo (Excedente)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "SESC SC (SESCPREV)":
-                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    st.success(f"**Contribuição Sugerida:** R$ {formatar_br(total)}")
                     st.info("Cálculo realizado via fator de Parcela a Deduzir.")
                     if f3 > 0:
                         col_f1, col_f2, col_f3 = st.columns(3)
-                        col_f1.metric("Valor Base", f"R$ {f1:,.2f}")
-                        col_f2.metric("Diferença Faixa 2", f"R$ {f2:,.2f}")
-                        col_f3.metric("Diferença Faixa 3", f"R$ {f3:,.2f}")
+                        col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
+                        col_f3.metric("Diferença Faixa 3", f"R$ {formatar_br(f3)}")
                     elif f2 > 0:
                         col_f1, col_f2 = st.columns(2)
-                        col_f1.metric("Valor Base", f"R$ {f1:,.2f}")
-                        col_f2.metric("Diferença Faixa 2", f"R$ {f2:,.2f}")
+                        col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
                 else:
-                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    st.success(f"**Contribuição Sugerida:** R$ {formatar_br(total)}")
                     if superavit > 0:
-                        st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {superavit:,.2f}**")
+                        st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {formatar_br(superavit)}**")
                     if f3 > 0:
                         col_f1, col_f2, col_f3 = st.columns(3)
-                        col_f1.metric("Fatia 1", f"R$ {f1:,.2f}")
-                        col_f2.metric("Fatia 2", f"R$ {f2:,.2f}")
-                        col_f3.metric("Fatia 3 (Excedente)", f"R$ {f3:,.2f}")
+                        col_f1.metric("Fatia 1", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Fatia 2", f"R$ {formatar_br(f2)}")
+                        col_f3.metric("Fatia 3 (Excedente)", f"R$ {formatar_br(f3)}")
                     elif f2 > 0:
                         col_f1, col_f2 = st.columns(2)
-                        col_f1.metric("Fatia 1 (Até Teto)", f"R$ {f1:,.2f}")
-                        col_f2.metric("Fatia 2 (Excedente)", f"R$ {f2:,.2f}")
+                        col_f1.metric("Fatia 1 (Até Teto)", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Fatia 2 (Excedente)", f"R$ {formatar_br(f2)}")
             else:
                 st.warning("Insira um salário válido.")
 
@@ -617,7 +609,7 @@ if menu_selecionado == "📊 Simulador Individual":
                 if salario_descob == 0:
                     st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas.")
                 else:
-                    st.success(f"**Salário Exato Necessário:** R$ {salario_descob:,.2f}")
+                    st.success(f"**Salário Exato Necessário:** R$ {formatar_br(salario_descob)}")
             else:
                 st.warning("Insira uma contribuição válida.")
 
