@@ -39,7 +39,7 @@ planos = {
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tipo": "fatias"},
     "SENACPREV": {"ur": 699.76, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tipo": "fatias"},
     "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tipo": "fatias_triplas_senai"},
-    "PREVISC SENAI-MA": {"ur": 560.37, "teto1_urs": 4.5, "teto2_urs": 9.0, "aliq_1": 0.030, "aliq_2": 0.05, "aliq_3": 0.23, "tipo": "fatias_triplas_senai"},
+    "PREVISC SENAI-MA": {"teto1_rs": 2521.45, "teto2_rs": 5042.89, "tipo": "fatias_triplas_fiema"},
     "PREVISC SISTEMA FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.03, "aliq_2": 0.075, "tipo": "fatias"},
     "FECOMERCIO": {"ur": 504.97, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tipo": "fatias"},
     "FIEMTPREV": {"ur": 688.24, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tipo": "fatias"},
@@ -59,6 +59,7 @@ apelidos_planilha = {
     "SENAI-PI": "SENAI-PIPREV",
     "SENAI-MA": "PREVISC SENAI-MA",
     "FIEMA": "PREVISC SENAI-MA",
+    "PREVSENAI": "PREVISC SENAI-MA",
     "SESI-PI": "SESI-PIPREV"
 }
 
@@ -70,7 +71,7 @@ def formatar_br(valor):
         return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return valor
 
-def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
+def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30, fiema_faixa="Faixa 1"):
     plano = planos.get(plano_nome)
     if not plano:
         return 0.0, 0.0, 0.0, 0.0, 0.0
@@ -194,6 +195,32 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         total_bruto = f1 + f2 + f3
         superavit = total_bruto * taxa_superavit
         return (total_bruto - superavit), f1, f2, f3, superavit
+        
+    if tipo == "fatias_triplas_fiema":
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
+        
+        if fiema_faixa == "Faixa 1":
+            a1, a2, a3 = 0.0210, 0.0350, 0.1610
+        elif fiema_faixa == "Faixa 2":
+            a1, a2, a3 = 0.0180, 0.0300, 0.1380
+        else: 
+            a1, a2, a3 = 0.0150, 0.0250, 0.1150
+            
+        if salario <= teto1_rs:
+            f1 = salario * a1
+            f2 = f3 = 0.0
+        elif salario <= teto2_rs:
+            f1 = teto1_rs * a1
+            f2 = (salario - teto1_rs) * a2
+            f3 = 0.0
+        else:
+            f1 = teto1_rs * a1
+            f2 = (teto2_rs - teto1_rs) * a2
+            f3 = (salario - teto2_rs) * a3
+            
+        total_bruto = f1 + f2 + f3
+        return total_bruto, f1, f2, f3, 0.0
 
     # Categoria Fatias (Padrão) - Usada também pelo SESI-PIPREV
     teto_rs = plano["ur"] * plano["teto_urs"]
@@ -209,7 +236,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
     return (total_bruto - superavit), f1, f2, 0.0, superavit
 
 
-def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30):
+def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30, fiema_faixa="Faixa 1"):
     plano = planos.get(plano_nome)
     if not plano:
         return 0.0
@@ -217,6 +244,7 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
     tipo = plano.get("tipo", "fatias")
     taxa_superavit = plano.get("superavit", 0.0)
     
+    # Se houver superávit, o valor recebido na tela (líquido) é "inflado" para o bruto original
     contribuicao = contribuicao_liquida / (1 - taxa_superavit)
     
     if tipo in ["fixo"]:
@@ -309,6 +337,27 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
             return teto1_rs + ((contribuicao - max_f1) / plano["aliq_2"])
         else:
             return teto2_rs + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
+            
+    if tipo == "fatias_triplas_fiema":
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
+        
+        if fiema_faixa == "Faixa 1":
+            a1, a2, a3 = 0.0210, 0.0350, 0.1610
+        elif fiema_faixa == "Faixa 2":
+            a1, a2, a3 = 0.0180, 0.0300, 0.1380
+        else: 
+            a1, a2, a3 = 0.0150, 0.0250, 0.1150
+            
+        max_f1 = teto1_rs * a1
+        max_f2 = (teto2_rs - teto1_rs) * a2
+        
+        if contribuicao <= max_f1:
+            return contribuicao / a1
+        elif contribuicao <= max_f1 + max_f2:
+            return teto1_rs + ((contribuicao - max_f1) / a2)
+        else:
+            return teto2_rs + ((contribuicao - max_f1 - max_f2) / a3)
 
     # Categoria Fatias (Padrão) - Usada também pelo SESI-PIPREV
     teto_rs = plano["ur"] * plano["teto_urs"]
@@ -350,6 +399,7 @@ if menu_selecionado == "📊 Simulador Individual":
     univali_migrante = "Migrante"
     univali_tipo = "Normal"
     idade_input = 30
+    fiema_faixa_selecionada = "Faixa 1"
 
     if plano_selecionado == "UNIVALIPrevidencia":
         col_u1, col_u2, col_u3 = st.columns(3)
@@ -359,8 +409,20 @@ if menu_selecionado == "📊 Simulador Individual":
             univali_tipo = st.radio("Contribuição:", ["Normal", "Reduzida"])
         with col_u3:
             idade_input = st.number_input("Idade:", min_value=16, max_value=80, value=30, step=1)
+            
     elif plano_dados.get("tipo") == "unerjprev_idade":
         idade_input = st.number_input("Idade do Participante na Adesão:", min_value=16, max_value=80, value=30, step=1)
+        
+    elif plano_selecionado == "PREVISC SENAI-MA":
+        st.markdown("""
+        **Escolha a faixa de contribuição desejada:**
+        | Faixa | Salários até R$ 2.521,45 | Salários entre R$ 2.521,45 e R$ 5.042,89 | Salários acima de R$ 5.042,89 |
+        |:---:|:---:|:---:|:---:|
+        | **1** | 2,10% | 3,50% | 16,10% |
+        | **2** | 1,80% | 3,00% | 13,80% |
+        | **3** | 1,50% | 2,50% | 11,50% |
+        """)
+        fiema_faixa_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3"], horizontal=True)
 
     st.divider()
 
@@ -396,7 +458,7 @@ if menu_selecionado == "📊 Simulador Individual":
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
-                total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input)
+                total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input, fiema_faixa_selecionada)
                 
                 if total == 0:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
@@ -448,7 +510,7 @@ if menu_selecionado == "📊 Simulador Individual":
             
         if st.button("Descobrir Salário", type="primary"):
             if contrib_input > 0:
-                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input)
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input, fiema_faixa_selecionada)
                 if salario_descob == 0:
                     st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas e fatias de dedução.")
                 else:
@@ -465,9 +527,10 @@ elif menu_selecionado == "📂 Cálculo de Contribuição em Lote":
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
     df_modelo = pd.DataFrame({
-        "Plano": ["FIESCPREV", "SESCPREV", "UNIVALIPrevidencia"],
+        "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "UNIVALIPrevidencia"],
         "Salário Bruto": [4500.00, 8000.00, 5200.00],
         "Idade (Opcional)": [30, 45, 35],
+        "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0],
         "Univali Categoria (Opcional)": ["-", "-", "Migrante"],
         "Univali Tipo (Opcional)": ["-", "-", "Normal"]
@@ -507,7 +570,10 @@ elif menu_selecionado == "📂 Cálculo de Contribuição em Lote":
                     univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote.columns else "Migrante"
                     univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote.columns else "Normal"
                     
-                    total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade)[0]
+                    faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)", "1")).strip()
+                    fiema_faixa_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3"] else "Faixa 1"
+                    
+                    total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade, fiema_faixa_planilha)[0]
                     resultados.append(total_pagar)
                 else:
                     resultados.append("Plano Não Encontrado")
@@ -539,9 +605,10 @@ elif menu_selecionado == "📂 Cálculo de Salário em Lote":
     st.write("Baixe a planilha modelo, preencha a Contribuição Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
     df_modelo_rev = pd.DataFrame({
-        "Plano": ["FIESCPREV", "SESCPREV", "UNIVALIPrevidencia"],
+        "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "UNIVALIPrevidencia"],
         "Contribuição Alvo": [450.00, 300.00, 520.00],
         "Idade (Opcional)": [30, 45, 35],
+        "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0],
         "Univali Categoria (Opcional)": ["-", "-", "Migrante"],
         "Univali Tipo (Opcional)": ["-", "-", "Normal"]
@@ -581,7 +648,10 @@ elif menu_selecionado == "📂 Cálculo de Salário em Lote":
                     univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote_rev.columns else "Migrante"
                     univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote_rev.columns else "Normal"
                     
-                    salario_descob = calcular_salario_reverso(plano_oficial, contribuicao_alvo, aliq, univ_cat, univ_tipo, idade)
+                    faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)", "1")).strip()
+                    fiema_faixa_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3"] else "Faixa 1"
+                    
+                    salario_descob = calcular_salario_reverso(plano_oficial, contribuicao_alvo, aliq, univ_cat, univ_tipo, idade, fiema_faixa_planilha)
                     
                     if salario_descob == 0:
                         resultados_rev.append("Cálculo Incompatível")
@@ -621,7 +691,7 @@ elif menu_selecionado == "📖 Regras e Bases de Cálculo":
         {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "699,76", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Fatias Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit (7,28%)"},
-        {"Plano": "PREVISC SENAI-MA", "Indexador": "UR", "Valor (R$)": "560,37", "Regra de Cálculo": "Fatias Triplas: 3% (Até 4,5 UR) | 5% (Até 9 UR) | 23% (Acima)"},
+        {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante"},
         {"Plano": "PREVISC SISTEMA FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "504,97", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "688,24", "Regra de Cálculo": "Fatias: 2% (Até 12,06 UR) | 7,25% (Acima)"},
