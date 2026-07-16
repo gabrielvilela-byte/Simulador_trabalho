@@ -756,4 +756,21 @@ elif menu_selecionado == "📖 Regras e Bases de Cálculo":
     dados_tabela = [
         {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
         {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
-        {"Plano": "SENACPREV", "Indexador": "UR
+        {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "699,76", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
+        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Fatias Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit (7,28%)"},
+        {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Fatias: R$ 2.521,45 e R$ 5.042,89)"},
+        {"Plano": "PREVFIEPA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,00% a 7,00% dependendo da opção escolhida pelo participante (Fatias: R$ 2.824,00 e R$ 7.786,02)"},
+        {"Plano": "PREVISC SISTEMA FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
+        {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "504,97", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
+        {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "688,24", "Regra de Cálculo": "Fatias: 2% (Até 12,06 UR) | 7,25% (Acima)"},
+        {"Plano": "PREVISC", "Indexador": "UR", "Valor (R$)": "710,76", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
+        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Fatia Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Idade"},
+        {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fatias: 2% (Até 1 SP) | 14% (Acima)"},
+        {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Fatias de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
+        {"Plano": "LUNELLIPREV", "Indexador": "UP", "Valor (R$)": "535,87", "Regra de Cálculo": "Livre Escolha (% Fixo sem Teto sobre a base inteira)"},
+        {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "5.998,34", "Regra de Cálculo": "Fatias Cascata (SRC): 3% (Até 0,5 UP) | 5% (0,5 a 1) | 12% (1 a 3) | 15% (Acima)"},
+        {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo conforme a idade"},
+        {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
+    ]
+    
+    st.dataframe(pd.DataFrame(dados_tabela), use_container_width=True, hide_index=True)
