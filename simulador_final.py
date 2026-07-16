@@ -486,4 +486,274 @@ if menu_selecionado == "📊 Simulador Individual":
         st.subheader("Calcular Contribuição")
         salario_input = st.number_input("Digite o Salário de Participação (R$):", min_value=0.0, value=0.0, step=100.0, format="%.2f")
         
-        aliq_escolhida
+        aliq_escolhida = None
+        if plano_dados.get("tipo") == "up_sem_teto":
+            st.info(f"A UP atual deste plano é de R$ {plano_dados['ur']:,.2f}")
+            if salario_input > 0:
+                qtd_ups = salario_input / plano_dados["ur"]
+                st.write(f"O seu salário equivale a **{qtd_ups:,.2f} UPs**.")
+            aliq_input = st.number_input("Alíquota de Contribuição (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5)
+            aliq_escolhida = aliq_input / 100
+            
+        if plano_selecionado == "PREVIFIEA":
+            st.info(f"A UP atual adotada para o plano PreviFIEA é de R$ {plano_dados['ur']:,.2f}")
+        if plano_dados.get("tipo") == "unerjprev_idade":
+            st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {plano_dados['ur']:,.2f}")
+        if plano_selecionado == "SENAI-PIPREV":
+            st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {plano_dados['ur']:,.2f}")
+        if plano_selecionado == "UNIVALIPrevidencia":
+            st.info(f"A UR atual adotada para o plano UNIVALIPrevidencia é de R$ {plano_dados['ur']:,.2f}")
+        if plano_selecionado == "SESI-PIPREV":
+            st.info(f"A SP atual adotada para o plano SESI-PI é de R$ {plano_dados['ur']:,.2f}")
+        
+        if st.button("Gerar Cálculo", type="primary"):
+            if salario_input > 0:
+                total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input, faixa_opcao_selecionada)
+                
+                if total == 0:
+                    st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
+                elif plano_dados.get("tipo") in ["up_sem_teto", "unerjprev_idade"]:
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                elif plano_selecionado == "PREVIFIEA":
+                    st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {f1:,.2f}")
+                    col_f2.metric("Fatias Intermédias", f"R$ {f2:,.2f}")
+                    col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {f3:,.2f}")
+                elif plano_selecionado in ["PREVISC SENAI-MA", "PREVFIEPA"]:
+                    st.success(f"**Contribuição Ideal (Cascata):** R$ {total:,.2f}")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    if plano_selecionado == "PREVISC SENAI-MA":
+                        col_f1.metric("Fatia Base (Até R$ 2.521,45)", f"R$ {f1:,.2f}")
+                        col_f2.metric("Fatia Intermediária (Até R$ 5.042,89)", f"R$ {f2:,.2f}")
+                    else:
+                        col_f1.metric("Fatia Base (Até R$ 2.824,00)", f"R$ {f1:,.2f}")
+                        col_f2.metric("Fatia Intermediária (Até R$ 7.786,02)", f"R$ {f2:,.2f}")
+                    col_f3.metric("Fatia Topo (Excedente)", f"R$ {f3:,.2f}")
+                elif plano_selecionado == "SESC SC (SESCPREV)":
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    st.info("Cálculo realizado via fator de Parcela a Deduzir.")
+                    if f3 > 0:
+                        col_f1, col_f2, col_f3 = st.columns(3)
+                        col_f1.metric("Valor Base", f"R$ {f1:,.2f}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {f2:,.2f}")
+                        col_f3.metric("Diferença Faixa 3", f"R$ {f3:,.2f}")
+                    elif f2 > 0:
+                        col_f1, col_f2 = st.columns(2)
+                        col_f1.metric("Valor Base", f"R$ {f1:,.2f}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {f2:,.2f}")
+                else:
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    if superavit > 0:
+                        st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {superavit:,.2f}**")
+                    if f3 > 0:
+                        col_f1, col_f2, col_f3 = st.columns(3)
+                        col_f1.metric("Fatia 1", f"R$ {f1:,.2f}")
+                        col_f2.metric("Fatia 2", f"R$ {f2:,.2f}")
+                        col_f3.metric("Fatia 3 (Excedente)", f"R$ {f3:,.2f}")
+                    elif f2 > 0:
+                        col_f1, col_f2 = st.columns(2)
+                        col_f1.metric("Fatia 1 (Até Teto)", f"R$ {f1:,.2f}")
+                        col_f2.metric("Fatia 2 (Excedente)", f"R$ {f2:,.2f}")
+            else:
+                st.warning("Insira um salário válido.")
+
+    with aba_reversa:
+        st.subheader("Cálculo de Salário a partir da Contribuição")
+        contrib_input = st.number_input("Digite a Contribuição Alvo (R$):", min_value=0.0, value=0.0, step=10.0, format="%.2f")
+        
+        aliq_escolhida_rev = None
+        if plano_dados.get("tipo") == "up_sem_teto":
+            aliq_input_rev = st.number_input("Alíquota Utilizada (%):", min_value=1.0, value=plano_dados["aliq_1"]*100, step=0.5, key="aliq_rev")
+            aliq_escolhida_rev = aliq_input_rev / 100
+            
+        if st.button("Descobrir Salário", type="primary"):
+            if contrib_input > 0:
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input, faixa_opcao_selecionada)
+                if salario_descob == 0:
+                    st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas.")
+                else:
+                    st.success(f"**Salário Exato Necessário:** R$ {salario_descob:,.2f}")
+            else:
+                st.warning("Insira uma contribuição válida.")
+
+
+# =================================================================
+# 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
+# =================================================================
+elif menu_selecionado == "📂 Cálculo de Contribuição em Lote":
+    st.title("📂 Cálculo de Contribuição em Lote")
+    st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
+    
+    df_modelo = pd.DataFrame({
+        "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "PREVFIEPA", "UNIVALIPrevidencia"],
+        "Salário Bruto": [4500.00, 8000.00, 6000.00, 5200.00],
+        "Idade (Opcional)": [30, 45, 28, 35],
+        "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
+        "Faixa FIEPA (1 a 3) (Opcional)": [1, 1, 3, 1],
+        "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
+        "Univali Categoria (Opcional)": ["-", "-", "-", "Migrante"],
+        "Univali Tipo (Opcional)": ["-", "-", "-", "Normal"]
+    })
+    
+    buffer_modelo = io.BytesIO()
+    with pd.ExcelWriter(buffer_modelo, engine='openpyxl') as writer:
+        df_modelo.to_excel(writer, index=False, sheet_name="Modelo_Contribuicao")
+    
+    st.download_button(
+        label="📥 Baixar Planilha Modelo (Contribuição)", 
+        data=buffer_modelo.getvalue(), 
+        file_name="modelo_contribuicao_lote.xlsx", 
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+    st.divider()
+    
+    st.subheader("Processar Base de Dados")
+    arquivo_upload = st.file_uploader("Faça o upload da planilha preenchida (.xlsx)", type=["xlsx"], key="up_contrib")
+    
+    if arquivo_upload is not None:
+        try:
+            df_lote = pd.read_excel(arquivo_upload)
+            
+            resultados = []
+            for idx, row in df_lote.iterrows():
+                plano_excel = str(row.get("Plano", "")).strip().upper()
+                plano_oficial = apelidos_planilha.get(plano_excel, str(row.get("Plano", "")).strip())
+                
+                if plano_oficial in planos:
+                    salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
+                    idade = int(row.get("Idade (Opcional)", 30)) if "Idade (Opcional)" in df_lote.columns and pd.notna(row.get("Idade (Opcional)")) else 30
+                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote.columns else 0.0
+                    aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
+                    univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote.columns else "Migrante"
+                    univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote.columns else "Normal"
+                    
+                    faixa_val = "1"
+                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")):
+                        faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
+                    elif "Faixa FIEPA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEPA (1 a 3) (Opcional)")):
+                        faixa_val = str(row.get("Faixa FIEPA (1 a 3) (Opcional)")).split('.')[0].strip()
+                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3"] else "Faixa 1"
+                    
+                    total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)[0]
+                    resultados.append(total_pagar)
+                else:
+                    resultados.append("Plano Não Encontrado")
+            
+            df_lote["Contribuição Sugerida (R$)"] = [formatar_br(v) for v in resultados]
+            
+            st.success("Cálculo em lote finalizado com sucesso!")
+            st.dataframe(df_lote, use_container_width=True)
+            
+            buffer_resultado = io.BytesIO()
+            with pd.ExcelWriter(buffer_resultado, engine='openpyxl') as writer:
+                df_lote.to_excel(writer, index=False, sheet_name="Resultados_Previsc")
+                
+            st.download_button(
+                label="📤 Baixar Resultados Processados", 
+                data=buffer_resultado.getvalue(), 
+                file_name="resultado_contribuicao_lote.xlsx", 
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        except Exception as e:
+            st.error(f"Erro ao ler a planilha. Detalhe: {e}")
+
+
+# =================================================================
+# 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
+# =================================================================
+elif menu_selecionado == "📂 Cálculo de Salário em Lote":
+    st.title("📂 Cálculo de Salário em Lote")
+    st.write("Baixe a planilha modelo, preencha a Contribuição Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
+    
+    df_modelo_rev = pd.DataFrame({
+        "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "PREVFIEPA", "UNIVALIPrevidencia"],
+        "Contribuição Alvo": [450.00, 300.00, 200.00, 520.00],
+        "Idade (Opcional)": [30, 45, 28, 35],
+        "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
+        "Faixa FIEPA (1 a 3) (Opcional)": [1, 1, 3, 1],
+        "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
+        "Univali Categoria (Opcional)": ["-", "-", "-", "Migrante"],
+        "Univali Tipo (Opcional)": ["-", "-", "-", "Normal"]
+    })
+    
+    buffer_modelo_rev = io.BytesIO()
+    with pd.ExcelWriter(buffer_modelo_rev, engine='openpyxl') as writer:
+        df_modelo_rev.to_excel(writer, index=False, sheet_name="Modelo_Salario")
+    
+    st.download_button(
+        label="📥 Baixar Planilha Modelo (Salário)", 
+        data=buffer_modelo_rev.getvalue(), 
+        file_name="modelo_salario_lote.xlsx", 
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+    st.divider()
+    
+    st.subheader("Processar Base de Dados")
+    arquivo_upload_rev = st.file_uploader("Faça o upload da planilha preenchida (.xlsx)", type=["xlsx"], key="up_salario")
+    
+    if arquivo_upload_rev is not None:
+        try:
+            df_lote_rev = pd.read_excel(arquivo_upload_rev)
+            
+            resultados_rev = []
+            for idx, row in df_lote_rev.iterrows():
+                plano_excel = str(row.get("Plano", "")).strip().upper()
+                plano_oficial = apelidos_planilha.get(plano_excel, str(row.get("Plano", "")).strip())
+                
+                if plano_oficial in planos:
+                    contribuicao_alvo = float(row.get("Contribuição Alvo", 0.0)) if pd.notna(row.get("Contribuição Alvo")) else 0.0
+                    idade = int(row.get("Idade (Opcional)", 30)) if "Idade (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Idade (Opcional)")) else 30
+                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote_rev.columns else 0.0
+                    aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
+                    univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote_rev.columns else "Migrante"
+                    univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote_rev.columns else "Normal"
+                    
+                    faixa_val = "1"
+                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")):
+                        faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
+                    elif "Faixa FIEPA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEPA (1 a 3) (Opcional)")):
+                        faixa_val = str(row.get("Faixa FIEPA (1 a 3) (Opcional)")).split('.')[0].strip()
+                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3"] else "Faixa 1"
+                    
+                    salario_descob = calcular_salario_reverso(plano_oficial,Access_val=contribuicao_alvo, aliq_escolhida=aliq, univali_migrante=univ_cat, univali_tipo=univ_tipo, idade=idade, faixa_opcao=faixa_opcao_planilha)
+                    
+                    if salario_descob == 0:
+                        resultados_rev.append("Cálculo Incompatível")
+                    else:
+                        resultados_rev.append(salario_descob)
+                else:
+                    resultados_rev.append("Plano Não Encontrado")
+            
+            df_lote_rev["Salário Exato Necessário (R$)"] = [formatar_br(v) for v in resultados_rev]
+            
+            st.success("Cálculo em lote finalizado com sucesso!")
+            st.dataframe(df_lote_rev, use_container_width=True)
+            
+            buffer_resultado_rev = io.BytesIO()
+            with pd.ExcelWriter(buffer_resultado_rev, engine='openpyxl') as writer:
+                df_lote_rev.to_excel(writer, index=False, sheet_name="Resultados_Previsc")
+                
+            st.download_button(
+                label="📤 Baixar Resultados Processados", 
+                data=buffer_resultado_rev.getvalue(), 
+                file_name="resultado_salario_lote.xlsx", 
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        except Exception as e:
+            st.error(f"Erro ao processar. Detalhe: {e}")
+
+
+# =================================================================
+# 8. TELA 4: REGRAS E BASES DE CÁLCULO
+# =================================================================
+elif menu_selecionado == "📖 Regras e Bases de Cálculo":
+    st.title("📖 Regras e Bases de Cálculo")
+    st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
+    
+    dados_tabela = [
+        {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
+        {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Fatias: 3% (Até 8,5 UR) | 7,5% (Acima)"},
+        {"Plano": "SENACPREV", "Indexador": "UR
