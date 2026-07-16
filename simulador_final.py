@@ -46,7 +46,7 @@ planos = {
     "PREVISC": {"ur": 710.76, "teto_urs": 7.0, "aliq_1": 0.03, "aliq_2": 0.14, "tipo": "fatias"},
     "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tipo": "fatias_univali"},
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.02, "aliq_2": 0.14, "tipo": "fatias"},
-    "SESC SC (SESCPREV)": {"ur": 878.70, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
+    "SESC SC (SESCPREV)": {"ur": 878.70, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "up_sem_teto"},
     "PREVIFIEA": {"ur": 5998.34, "aliq_1": 0.03, "aliq_2": 0.05, "aliq_3": 0.12, "aliq_4": 0.15, "tipo": "fatias_quadruplas_fiea"},
     "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"},
@@ -151,22 +151,26 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         return (total_bruto - superavit), f1, f2, 0.0, superavit
 
     if tipo == "sesc_triplo":
-        teto1_rs = plano["teto1_rs"]
-        teto2_rs = plano["teto2_rs"]
+        ur = plano["ur"]
+        teto1_rs = ur * 10.0
+        teto2_rs = ur * 11.4288
         
+        # O Sesc utiliza fórmula de Parcela de Dedução igual ao INSS (Base * Aliq - Fator*UR)
         if salario <= teto1_rs:
-            f1 = salario * plano["aliq_1"]
+            total_bruto = salario * plano["aliq_1"]
+            f1 = total_bruto
             f2 = f3 = 0.0
         elif salario <= teto2_rs:
+            total_bruto = (salario * plano["aliq_2"]) - (0.4190 * ur)
             f1 = teto1_rs * plano["aliq_1"]
-            f2 = (salario - teto1_rs) * plano["aliq_2"]
+            f2 = total_bruto - f1
             f3 = 0.0
         else:
+            total_bruto = (salario * plano["aliq_3"]) - (1.3424 * ur)
             f1 = teto1_rs * plano["aliq_1"]
-            f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
-            f3 = (salario - teto2_rs) * plano["aliq_3"]
+            f2 = ((teto2_rs * plano["aliq_2"]) - (0.4190 * ur)) - f1
+            f3 = total_bruto - f1 - f2
             
-        total_bruto = f1 + f2 + f3
         superavit = total_bruto * taxa_superavit
         return (total_bruto - superavit), f1, f2, f3, superavit
 
@@ -276,17 +280,20 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
             return teto_rs + ((contribuicao - max_f1) / aliq_2)
 
     if tipo == "sesc_triplo":
-        teto1_rs = plano["teto1_rs"]
-        teto2_rs = plano["teto2_rs"]
-        max_f1 = teto1_rs * plano["aliq_1"]
-        max_f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
+        ur = plano["ur"]
+        teto1_rs = ur * 10.0
+        teto2_rs = ur * 11.4288
         
-        if contribuicao <= max_f1:
+        # Limites cravados baseados na fórmula de dedução
+        max_c1 = teto1_rs * plano["aliq_1"]
+        max_c2 = (teto2_rs * plano["aliq_2"]) - (0.4190 * ur)
+        
+        if contribuicao <= max_c1:
             return contribuicao / plano["aliq_1"]
-        elif contribuicao <= max_f1 + max_f2:
-            return teto1_rs + ((contribuicao - max_f1) / plano["aliq_2"])
+        elif contribuicao <= max_c2:
+            return (contribuicao + (0.4190 * ur)) / plano["aliq_2"]
         else:
-            return teto2_rs + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
+            return (contribuicao + (1.3424 * ur)) / plano["aliq_3"]
 
     if tipo == "fatias_triplas_senai":
         ur = plano["ur"]
@@ -397,6 +404,18 @@ if menu_selecionado == "📊 Simulador Individual":
                     col_f1.metric("Fatia Base (Até 0,5 UP)", f"R$ {f1:,.2f}")
                     col_f2.metric("Fatias Intermédias", f"R$ {f2:,.2f}")
                     col_f3.metric("Fatia Topo (> 3 UPs)", f"R$ {f3:,.2f}")
+                elif plano_selecionado == "SESC SC (SESCPREV)":
+                    st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
+                    st.info("Cálculo realizado via fator de Parcela a Deduzir.")
+                    if f3 > 0:
+                        col_f1, col_f2, col_f3 = st.columns(3)
+                        col_f1.metric("Valor Base", f"R$ {f1:,.2f}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {f2:,.2f}")
+                        col_f3.metric("Diferença Faixa 3", f"R$ {f3:,.2f}")
+                    elif f2 > 0:
+                        col_f1, col_f2 = st.columns(2)
+                        col_f1.metric("Valor Base", f"R$ {f1:,.2f}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {f2:,.2f}")
                 else:
                     st.success(f"**Contribuição Ideal:** R$ {total:,.2f}")
                     if superavit > 0:
@@ -605,7 +624,7 @@ elif menu_selecionado == "📖 Regras e Bases de Cálculo":
         {"Plano": "PREVISC", "Indexador": "UR", "Valor (R$)": "710,76", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
         {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Fatia Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Idade"},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fatias: 2% (Até 1 SP) | 14% (Acima)"},
-        {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Fatias Cascata: 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
+        {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Fatias de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "UP", "Valor (R$)": "535,87", "Regra de Cálculo": "Livre Escolha (% Fixo sem Teto sobre a base inteira)"},
         {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "5.998,34", "Regra de Cálculo": "Fatias Cascata (SRC): 3% (Até 0,5 UP) | 5% (0,5 a 1) | 12% (1 a 3) | 15% (Acima)"},
         {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo conforme a idade"},
