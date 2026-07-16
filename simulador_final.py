@@ -44,9 +44,9 @@ planos = {
     "FECOMERCIO": {"ur": 504.97, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tipo": "fatias"},
     "FIEMTPREV": {"ur": 688.24, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tipo": "fatias"},
     "PREVISC": {"ur": 710.76, "teto_urs": 7.0, "aliq_1": 0.03, "aliq_2": 0.14, "tipo": "fatias"},
-    "UNIVALIPrevidencia": {"ur": 623.33, "teto_urs": 8.0, "aliq_1": 0.030, "tipo": "fatias_univali"},
+    "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tipo": "fatias_univali"},
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.02, "aliq_2": 0.14, "tipo": "fatias"},
-    "SESC SC (SESCPREV)": {"ur": 878.70, "teto_urs": 10.0, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
+    "SESC SC (SESCPREV)": {"ur": 878.70, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tipo": "up_sem_teto"},
     "PREVIFIEA": {"ur": 5998.34, "aliq_1": 0.03, "aliq_2": 0.05, "aliq_3": 0.12, "aliq_4": 0.15, "tipo": "fatias_quadruplas_fiea"},
     "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tipo": "fixo"},
@@ -151,21 +151,20 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         return (total_bruto - superavit), f1, f2, 0.0, superavit
 
     if tipo == "sesc_triplo":
-        ur = plano["ur"]
-        teto1_rs = ur * 10.0
-        teto2_rs = ur * 11.4288
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
         
         if salario <= teto1_rs:
             f1 = salario * plano["aliq_1"]
             f2 = f3 = 0.0
         elif salario <= teto2_rs:
             f1 = teto1_rs * plano["aliq_1"]
-            f2 = (salario * plano["aliq_2"]) - (0.4190 * ur)
+            f2 = (salario - teto1_rs) * plano["aliq_2"]
             f3 = 0.0
         else:
             f1 = teto1_rs * plano["aliq_1"]
-            f2 = (teto2_rs * plano["aliq_2"]) - (0.4190 * ur)
-            f3 = (salario * plano["aliq_3"]) - (1.3424 * ur)
+            f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
+            f3 = (salario - teto2_rs) * plano["aliq_3"]
             
         total_bruto = f1 + f2 + f3
         superavit = total_bruto * taxa_superavit
@@ -217,7 +216,7 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
     # Se houver superávit, o valor recebido na tela (líquido) é "inflado" para o bruto original
     contribuicao = contribuicao_liquida / (1 - taxa_superavit)
     
-    if tipo in ["fixo", "sesc_triplo"]:
+    if tipo in ["fixo"]:
         return 0.0 
         
     if tipo == "up_sem_teto":
@@ -275,6 +274,19 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
             return contribuicao / plano["aliq_1"]
         else:
             return teto_rs + ((contribuicao - max_f1) / aliq_2)
+
+    if tipo == "sesc_triplo":
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
+        max_f1 = teto1_rs * plano["aliq_1"]
+        max_f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        elif contribuicao <= max_f1 + max_f2:
+            return teto1_rs + ((contribuicao - max_f1) / plano["aliq_2"])
+        else:
+            return teto2_rs + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
 
     if tipo == "fatias_triplas_senai":
         ur = plano["ur"]
@@ -367,6 +379,9 @@ if menu_selecionado == "📊 Simulador Individual":
             
         if plano_selecionado == "SENAI-PIPREV":
             st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {plano_dados['ur']:,.2f}")
+            
+        if plano_selecionado == "UNIVALIPrevidencia":
+            st.info(f"A UR atual adotada para o plano UNIVALIPrevidencia é de R$ {plano_dados['ur']:,.2f}")
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
@@ -588,9 +603,9 @@ elif menu_selecionado == "📖 Regras e Bases de Cálculo":
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "504,97", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "688,24", "Regra de Cálculo": "Fatias: 2% (Até 12,06 UR) | 7,25% (Acima)"},
         {"Plano": "PREVISC", "Indexador": "UR", "Valor (R$)": "710,76", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
-        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "623,33", "Regra de Cálculo": "Fatia Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Idade"},
+        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Fatia Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Idade"},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fatias: 2% (Até 1 SP) | 14% (Acima)"},
-        {"Plano": "SESC SC (SESCPREV)", "Indexador": "UR", "Valor (R$)": "878,70", "Regra de Cálculo": "Fatias Dedutíveis: 1,39% (Até 10) | 5,58% (10 a 11,42) | 13,66% (Acima) com abatimentos fixos"},
+        {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Fatias Cascata: 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "UP", "Valor (R$)": "535,87", "Regra de Cálculo": "Livre Escolha (% Fixo sem Teto sobre a base inteira)"},
         {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "5.998,34", "Regra de Cálculo": "Fatias Cascata (SRC): 3% (Até 0,5 UP) | 5% (0,5 a 1) | 12% (1 a 3) | 15% (Acima)"},
         {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo conforme a idade"},
