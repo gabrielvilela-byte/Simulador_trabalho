@@ -80,7 +80,7 @@ def formatar_br(valor):
         return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return valor
 
-def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30, faixa_opcao="Faixa 1"):
+def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
     plano = planos.get(plano_nome)
     if not plano:
         return 0.0, 0.0, 0.0, 0.0, 0.0
@@ -102,11 +102,11 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         if salario <= teto_inss:
             aliq = plano["aliq_1"]
         else:
-            if idade <= 44:
+            if idade_ou_tempo <= 44:
                 aliq = 0.03
-            elif 45 <= idade <= 49:
+            elif 45 <= idade_ou_tempo <= 49:
                 aliq = 0.04
-            elif 50 <= idade <= 54:
+            elif 50 <= idade_ou_tempo <= 54:
                 aliq = 0.05
             else: 
                 aliq = 0.06
@@ -283,7 +283,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
     return (total_bruto - superavit), f1, f2, 0.0, superavit
 
 
-def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade=30, faixa_opcao="Faixa 1"):
+def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
     plano = planos.get(plano_nome)
     if not plano:
         return 0.0
@@ -306,11 +306,11 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
         if contribuicao <= max_025:
             return contribuicao / plano["aliq_1"]
         else:
-            if idade <= 44:
+            if idade_ou_tempo <= 44:
                 aliq = 0.03
-            elif 45 <= idade <= 49:
+            elif 45 <= idade_ou_tempo <= 49:
                 aliq = 0.04
-            elif 50 <= idade <= 54:
+            elif 50 <= idade_ou_tempo <= 54:
                 aliq = 0.05
             else: 
                 aliq = 0.06
@@ -497,7 +497,7 @@ if menu_selecionado == "Simulador Individual":
 
     univali_migrante = "Migrante"
     univali_tipo = "Normal"
-    idade_input = 30
+    idade_ou_tempo_input = 30
     faixa_opcao_selecionada = "Faixa 1"
 
     if plano_selecionado == "UNIVALIPrevidencia":
@@ -507,10 +507,10 @@ if menu_selecionado == "Simulador Individual":
         with col_u2:
             univali_tipo = st.radio("Contribuição:", ["Normal", "Reduzida"])
         with col_u3:
-            idade_input = st.number_input("Idade:", min_value=16, max_value=80, value=30, step=1)
+            idade_ou_tempo_input = st.number_input("Tempo de Contrib. (Anos):", min_value=0, max_value=60, value=0, step=1)
             
     elif plano_dados.get("tipo") == "unerjprev_idade":
-        idade_input = st.number_input("Idade do Participante na Adesão:", min_value=16, max_value=80, value=30, step=1)
+        idade_ou_tempo_input = st.number_input("Idade do Participante na Adesão:", min_value=16, max_value=80, value=30, step=1)
         
     elif plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
@@ -569,7 +569,7 @@ if menu_selecionado == "Simulador Individual":
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
-                total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_input, faixa_opcao_selecionada)
+                total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
                 if total == 0:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
@@ -632,7 +632,7 @@ if menu_selecionado == "Simulador Individual":
             
         if st.button("Descobrir Salário", type="primary"):
             if contrib_input > 0:
-                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_input, faixa_opcao_selecionada)
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 if salario_descob == 0:
                     st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas.")
                 else:
@@ -651,7 +651,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
     df_modelo = pd.DataFrame({
         "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "PREVFIEPA", "UNIVALIPrevidencia"],
         "Salário Bruto": [4500.00, 8000.00, 6000.00, 5200.00],
-        "Idade (Opcional)": [30, 45, 28, 35],
+        "Idade / Tempo Contrib. (Opcional)": [30, 45, 28, 10],
         "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
         "Faixa FIEPA (1 a 6) (Opcional)": [1, 1, 4, 1],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
@@ -686,7 +686,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
                 
                 if plano_oficial in planos:
                     salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
-                    idade = int(row.get("Idade (Opcional)", 30)) if "Idade (Opcional)" in df_lote.columns and pd.notna(row.get("Idade (Opcional)")) else 30
+                    idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
                     aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote.columns else 0.0
                     aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
                     univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote.columns else "Migrante"
@@ -733,7 +733,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
     df_modelo_rev = pd.DataFrame({
         "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "PREVFIEPA", "UNIVALIPrevidencia"],
         "Contribuição Alvo": [450.00, 300.00, 200.00, 520.00],
-        "Idade (Opcional)": [30, 45, 28, 35],
+        "Idade / Tempo Contrib. (Opcional)": [30, 45, 28, 10],
         "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
         "Faixa FIEPA (1 a 6) (Opcional)": [1, 1, 4, 1],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
@@ -768,7 +768,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                 
                 if plano_oficial in planos:
                     contribuicao_alvo = float(row.get("Contribuição Alvo", 0.0)) if pd.notna(row.get("Contribuição Alvo")) else 0.0
-                    idade = int(row.get("Idade (Opcional)", 30)) if "Idade (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Idade (Opcional)")) else 30
+                    idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
                     aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote_rev.columns else 0.0
                     aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
                     univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip() if "Univali Categoria (Opcional)" in df_lote_rev.columns else "Migrante"
@@ -827,7 +827,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "504,97", "Regra de Cálculo": "Fatias: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "688,24", "Regra de Cálculo": "Fatias: 2% (Até 12,06 UR) | 7,25% (Acima)"},
         {"Plano": "PREVISC", "Indexador": "UR", "Valor (R$)": "710,76", "Regra de Cálculo": "Fatias: 3% (Até 7 UR) | 14% (Acima)"},
-        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Fatia Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Idade"},
+        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Fatia Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Tempo de Contribuição"},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fatias: 2% (Até 1 SP) | 14% (Acima)"},
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Fatias de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "UP", "Valor (R$)": "535,87", "Regra de Cálculo": "Livre Escolha (% Fixo sem Teto sobre a base inteira)"},
