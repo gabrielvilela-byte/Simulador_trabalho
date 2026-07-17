@@ -10,12 +10,19 @@ st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="cente
 st.markdown("""
     <style>
     h1, h2, h3 { color: #1B365D !important; }
+    
+    /* Melhoria no design dos botões para parecerem cards de menu */
     div.stButton > button:first-child {
-        background-color: #1B365D; color: white; border-radius: 6px;
-        border: none; padding: 10px 24px; font-weight: bold;
-        width: 100%;
+        background-color: #1B365D; color: white; border-radius: 8px;
+        border: none; padding: 20px 24px; font-weight: bold;
+        width: 100%; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.2s ease-in-out;
     }
-    div.stButton > button:first-child:hover { background-color: #274D85; color: white; }
+    div.stButton > button:first-child:hover { 
+        background-color: #274D85; color: white; 
+        transform: scale(1.02); box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+    }
+    
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
         font-weight: bold; color: #1B365D;
     }
@@ -437,28 +444,53 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
 
 
 # =================================================================
-# 4. NAVEGAÇÃO LATERAL (SIDEBAR)
+# 4. NAVEGAÇÃO CENTRAL E TELA HOME
 # =================================================================
-st.sidebar.title("📌 Menu de Navegação")
-menu_selecionado = st.sidebar.radio(
-    "Escolha a ferramenta:",
-    [
-        "📊 Simulador Individual", 
-        "📂 Cálculo de Contribuição em Lote", 
-        "📂 Cálculo de Salário em Lote",
-        "📖 Regras e Bases de Cálculo"
-    ]
-)
-st.sidebar.divider()
-st.sidebar.info("Sistema interno desenvolvido para cálculos previdenciários precisos e consulta de regras vigentes.")
+if 'menu_selecionado' not in st.session_state:
+    st.session_state['menu_selecionado'] = 'home'
+
+menu_selecionado = st.session_state['menu_selecionado']
+
+if menu_selecionado == 'home':
+    st.markdown("<br><br><h1 style='text-align: center; color: #1B365D; font-size: 3.5em; letter-spacing: 2px;'>PREVISC</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 1.2em; color: #4A5568;'>Selecione a ferramenta de cálculo desejada:</p><br><br>", unsafe_allow_html=True)
+    
+    col1, col_espaco, col2 = st.columns([1, 0.1, 1])
+    
+    with col1:
+        if st.button("📊 Simulador Individual", use_container_width=True):
+            st.session_state['menu_selecionado'] = "Simulador Individual"
+            st.rerun()
+        st.write("") # Espaçamento
+        if st.button("📂 Cálculo de Salário em Lote", use_container_width=True):
+            st.session_state['menu_selecionado'] = "Cálculo de Salário em Lote"
+            st.rerun()
+            
+    with col2:
+        if st.button("📂 Cálculo de Contribuição em Lote", use_container_width=True):
+            st.session_state['menu_selecionado'] = "Cálculo de Contribuição em Lote"
+            st.rerun()
+        st.write("") # Espaçamento
+        if st.button("📖 Regras e Bases de Cálculo", use_container_width=True):
+            st.session_state['menu_selecionado'] = "Regras e Bases de Cálculo"
+            st.rerun()
+
+else:
+    # Botão de Voltar na Barra Lateral para as Telas Internas
+    st.sidebar.title("📌 Navegação")
+    if st.sidebar.button("🏠 Voltar ao Menu Principal", use_container_width=True):
+        st.session_state['menu_selecionado'] = 'home'
+        st.rerun()
+    st.sidebar.divider()
+    st.sidebar.info("Sistema interno desenvolvido para cálculos previdenciários precisos e consulta de regras vigentes.")
 
 
 # =================================================================
 # 5. TELA 1: SIMULADOR INDIVIDUAL
 # =================================================================
-if menu_selecionado == "📊 Simulador Individual":
+if menu_selecionado == "Simulador Individual":
     st.title("🏢 Simulador Previsc")
-    st.write("Selecione o plano abaixo para calcular a contribuição ideal ou calcular o salário a partir da contribuição.")
+    st.write("Selecione o plano abaixo para calcular a contribuição sugerida ou calcular o salário a partir da contribuição.")
 
     plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
     plano_dados = planos[plano_selecionado]
@@ -524,19 +556,14 @@ if menu_selecionado == "📊 Simulador Individual":
             
         if plano_selecionado == "PREVIFIEA":
             st.info(f"A UP atual adotada para o plano PreviFIEA é de R$ {formatar_br(plano_dados['ur'])}")
-            
         if plano_dados.get("tipo") == "unerjprev_idade":
             st.info(f"O Teto do INSS (1 UR) utilizado é de R$ {formatar_br(plano_dados['ur'])}")
-            
         if plano_selecionado == "SENAI-PIPREV":
             st.info(f"A UR atual adotada para o plano SENAI-PI é de R$ {formatar_br(plano_dados['ur'])}")
-            
         if plano_selecionado == "UNIVALIPrevidencia":
             st.info(f"A UR atual adotada para o plano UNIVALIPrevidencia é de R$ {formatar_br(plano_dados['ur'])}")
-            
         if plano_selecionado == "SESI-PIPREV":
             st.info(f"A SP atual adotada para o plano SESI-PI é de R$ {formatar_br(plano_dados['ur'])}")
-
         if plano_selecionado == "PREVFIEPA":
             st.info(f"A UP atual adotada para o plano PREVFIEPA é de R$ {formatar_br(plano_dados['up'])}")
         
@@ -617,7 +644,7 @@ if menu_selecionado == "📊 Simulador Individual":
 # =================================================================
 # 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
 # =================================================================
-elif menu_selecionado == "📂 Cálculo de Contribuição em Lote":
+elif menu_selecionado == "Cálculo de Contribuição em Lote":
     st.title("📂 Cálculo de Contribuição em Lote")
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
@@ -699,7 +726,7 @@ elif menu_selecionado == "📂 Cálculo de Contribuição em Lote":
 # =================================================================
 # 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
 # =================================================================
-elif menu_selecionado == "📂 Cálculo de Salário em Lote":
+elif menu_selecionado == "Cálculo de Salário em Lote":
     st.title("📂 Cálculo de Salário em Lote")
     st.write("Baixe a planilha modelo, preencha a Contribuição Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
@@ -785,7 +812,7 @@ elif menu_selecionado == "📂 Cálculo de Salário em Lote":
 # =================================================================
 # 8. TELA 4: REGRAS E BASES DE CÁLCULO
 # =================================================================
-elif menu_selecionado == "📖 Regras e Bases de Cálculo":
+elif menu_selecionado == "Regras e Bases de Cálculo":
     st.title("📖 Regras e Bases de Cálculo")
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
