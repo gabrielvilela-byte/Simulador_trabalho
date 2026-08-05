@@ -46,7 +46,7 @@ planos = {
     "SENACPREV": {"ur": 734.75, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tx_adm": 0.0218, "tx_risco": 0.0012, "tx_risco_auto": 0.0024, "tipo": "faixas"},
     "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_triplas_senai"},
     "PREVISC SENAI-MA": {"teto1_rs": 2521.45, "teto2_rs": 5042.89, "tx_adm": 0.0235, "tx_risco": 0.0, "tipo": "faixas_triplas_fiema"},
-    "PREVFIEPA": {"up": 7740.09, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiepa"},
+    "PREVFIEPA": {"ur": 3674.66, "aliq_1": 0.03, "aliq_2": 0.05, "aliq_3": 0.12, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_triplas_fiepa"},
     "FECOMERCIO": {"ur": 845.22, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
     "FIEMTPREV": {"ur": 715.77, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "PREVISC": {"ur": 710.76, "teto_urs": 7.0, "aliq_1": 0.03, "aliq_2": 0.14, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
@@ -279,44 +279,25 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         total_bruto = f1 + f2 + f3
         return total_bruto, f1, f2, f3, 0.0
 
-    if tipo == "faixas_quadruplas_fiepa":
-        up = plano["up"]
-        teto1 = up * 0.5
-        teto2 = up * 1.0
-        teto3 = up * 3.0
+    if tipo == "faixas_triplas_fiepa":
+        ur = plano["ur"]
+        teto1_rs = ur * 1.0
+        teto2_rs = ur * 2.0
         
-        if faixa_opcao == "Faixa 2":
-            a1, a2, a3, a4 = 0.0270, 0.0450, 0.1080, 0.1350
-        elif faixa_opcao == "Faixa 3":
-            a1, a2, a3, a4 = 0.0240, 0.0400, 0.0960, 0.1200
-        elif faixa_opcao == "Faixa 4":
-            a1, a2, a3, a4 = 0.0210, 0.0350, 0.0840, 0.1050
-        elif faixa_opcao == "Faixa 5":
-            a1, a2, a3, a4 = 0.0180, 0.0300, 0.0720, 0.0900
-        elif faixa_opcao == "Faixa 6":
-            a1, a2, a3, a4 = 0.0150, 0.0250, 0.0600, 0.0750
-        else: 
-            a1, a2, a3, a4 = 0.0300, 0.0500, 0.1200, 0.1500
-            
-        f1 = f2 = f3 = f4 = 0.0
-        
-        if salario <= teto1:
-            f1 = salario * a1
-        elif salario <= teto2:
-            f1 = teto1 * a1
-            f2 = (salario - teto1) * a2
-        elif salario <= teto3:
-            f1 = teto1 * a1
-            f2 = (teto2 - teto1) * a2
-            f3 = (salario - teto2) * a3
+        if salario <= teto1_rs:
+            f1 = salario * plano["aliq_1"]
+            f2 = f3 = 0.0
+        elif salario <= teto2_rs:
+            f1 = teto1_rs * plano["aliq_1"]
+            f2 = (salario - teto1_rs) * plano["aliq_2"]
+            f3 = 0.0
         else:
-            f1 = teto1 * a1
-            f2 = (teto2 - teto1) * a2
-            f3 = (teto3 - teto2) * a3
-            f4 = (salario - teto3) * a4
+            f1 = teto1_rs * plano["aliq_1"]
+            f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
+            f3 = (salario - teto2_rs) * plano["aliq_3"]
             
-        total_bruto = f1 + f2 + f3 + f4
-        return total_bruto, f1, (f2 + f3), f4, 0.0
+        total_bruto = f1 + f2 + f3
+        return total_bruto, f1, f2, f3, 0.0
 
     teto_rs = plano["ur"] * plano["teto_urs"]
     if salario <= teto_rs:
@@ -450,37 +431,20 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
         else:
             return teto2_rs + ((contribuicao - max_f1 - max_f2) / a3)
 
-    if tipo == "faixas_quadruplas_fiepa":
-        up = plano["up"]
-        teto1 = up * 0.5
-        teto2 = up * 1.0
-        teto3 = up * 3.0
+    if tipo == "faixas_triplas_fiepa":
+        ur = plano["ur"]
+        teto1_rs = ur * 1.0
+        teto2_rs = ur * 2.0
         
-        if faixa_opcao == "Faixa 2":
-            a1, a2, a3, a4 = 0.0270, 0.0450, 0.1080, 0.1350
-        elif faixa_opcao == "Faixa 3":
-            a1, a2, a3, a4 = 0.0240, 0.0400, 0.0960, 0.1200
-        elif faixa_opcao == "Faixa 4":
-            a1, a2, a3, a4 = 0.0210, 0.0350, 0.0840, 0.1050
-        elif faixa_opcao == "Faixa 5":
-            a1, a2, a3, a4 = 0.0180, 0.0300, 0.0720, 0.0900
-        elif faixa_opcao == "Faixa 6":
-            a1, a2, a3, a4 = 0.0150, 0.0250, 0.0600, 0.0750
-        else: 
-            a1, a2, a3, a4 = 0.0300, 0.0500, 0.1200, 0.1500
-            
-        max_f1 = teto1 * a1
-        max_f2 = (teto2 - teto1) * a2
-        max_f3 = (teto3 - teto2) * a3
+        max_f1 = teto1_rs * plano["aliq_1"]
+        max_f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
         
         if contribuicao <= max_f1:
-            return contribuicao / a1
+            return contribuicao / plano["aliq_1"]
         elif contribuicao <= max_f1 + max_f2:
-            return teto1 + ((contribuicao - max_f1) / a2)
-        elif contribuicao <= max_f1 + max_f2 + max_f3:
-            return teto2 + ((contribuicao - max_f1 - max_f2) / a3)
+            return teto1_rs + ((contribuicao - max_f1) / plano["aliq_2"])
         else:
-            return teto3 + ((contribuicao - max_f1 - max_f2 - max_f3) / a4)
+            return teto2_rs + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
 
     teto_rs = plano["ur"] * plano["teto_urs"]
     max_f1 = teto_rs * plano["aliq_1"]
@@ -638,20 +602,6 @@ if menu_selecionado == "Simulador Individual":
         """)
         faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3"], horizontal=True, key="faixa_fiema")
 
-    elif plano_selecionado == "PREVFIEPA":
-        st.markdown("""
-        **Escolha a faixa de contribuição desejada:**
-        | FAIXA | ATÉ 1/2 UP | ENTRE 1/2 E 1 UP | ENTRE 1 E 3 UP | EXCEDENTE A 3 UP |
-        |:---:|:---:|:---:|:---:|:---:|
-        | **1** | 3,00% | 5,00% | 12,00% | 15,00% |
-        | **2** | 2,70% | 4,50% | 10,80% | 13,50% |
-        | **3** | 2,40% | 4,00% | 9,60% | 12,00% |
-        | **4** | 2,10% | 3,50% | 8,40% | 10,50% |
-        | **5** | 1,80% | 3,00% | 7,20% | 9,00% |
-        | **6** | 1,50% | 2,50% | 6,00% | 7,50% |
-        """)
-        faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key="faixa_fiepa")
-
     st.divider()
     aba_normal, aba_reversa = st.tabs(["📊 Cálculo de Contribuição", "🔍 Cálculo de Salário"])
 
@@ -683,7 +633,7 @@ if menu_selecionado == "Simulador Individual":
         if plano_selecionado == "SESI-PIPREV":
             st.info(f"A SP atual adotada para o plano SESI-PI é de R$ {formatar_br(plano_dados['ur'])}")
         if plano_selecionado == "PREVFIEPA":
-            st.info(f"A UP atual adotada para o plano PREVFIEPA é de R$ {formatar_br(plano_dados['up'])}")
+            st.info(f"A UR atual adotada para o plano PREVFIEPA é de R$ {formatar_br(plano_dados['ur'])}")
         
         if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
@@ -703,9 +653,9 @@ if menu_selecionado == "Simulador Individual":
                 elif plano_selecionado == "PREVFIEPA":
                     st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
-                    col_f1.metric("Faixa Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
-                    col_f2.metric("Faixas Intermédias (0,5 a 3 UPs)", f"R$ {formatar_br(f2)}")
-                    col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
+                    col_f1.metric("Faixa Base (Até 1 UR)", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Faixas Intermédias (1 a 2 URs)", f"R$ {formatar_br(f2)}")
+                    col_f3.metric("Faixa Topo (> 2 URs)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "PREVISC SENAI-MA":
                     st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
@@ -842,20 +792,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         | **3** | 1,50% | 2,50% | 11,50% |
         """)
         faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3"], horizontal=True, key="faixa_fiema_auto")
-
-    elif plano_selecionado == "PREVFIEPA":
-        st.markdown("""
-        **Escolha a faixa de contribuição desejada:**
-        | FAIXA | ATÉ 1/2 UP | ENTRE 1/2 E 1 UP | ENTRE 1 E 3 UP | EXCEDENTE A 3 UP |
-        |:---:|:---:|:---:|:---:|:---:|
-        | **1** | 3,00% | 5,00% | 12,00% | 15,00% |
-        | **2** | 2,70% | 4,50% | 10,80% | 13,50% |
-        | **3** | 2,40% | 4,00% | 9,60% | 12,00% |
-        | **4** | 2,10% | 3,50% | 8,40% | 10,50% |
-        | **5** | 1,80% | 3,00% | 7,20% | 9,00% |
-        | **6** | 1,50% | 2,50% | 6,00% | 7,50% |
-        """)
-        faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key="faixa_fiepa_auto")
 
     st.divider()
 
@@ -1027,7 +963,6 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
         "Salário Bruto": [4500.00, 8000.00, 6000.00, 5200.00],
         "Idade / Tempo Contrib. (Opcional)": [30, 45, 28, 10],
         "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
-        "Faixa FIEPA (1 a 6) (Opcional)": [1, 1, 4, 1],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
         "Categoria (Opcional)": ["-", "-", "-", "Migrante"],
         "Univali Tipo (Opcional)": ["-", "-", "-", "Normal"]
@@ -1074,8 +1009,6 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
                     faixa_val = "1"
                     if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
                         faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
-                    elif "Faixa FIEPA (1 a 6) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEPA (1 a 6) (Opcional)")) and plano_oficial == "PREVFIEPA":
-                        faixa_val = str(row.get("Faixa FIEPA (1 a 6) (Opcional)")).split('.')[0].strip()
                     faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
                     
                     total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)[0]
@@ -1114,7 +1047,6 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
         "Cobrança Alvo": [450.00, 300.00, 200.00, 520.00],
         "Idade / Tempo Contrib. (Opcional)": [30, 45, 28, 10],
         "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
-        "Faixa FIEPA (1 a 6) (Opcional)": [1, 1, 4, 1],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
         "Categoria (Opcional)": ["-", "-", "-", "Migrante"],
         "Univali Tipo (Opcional)": ["-", "-", "-", "Normal"]
@@ -1160,8 +1092,6 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                     faixa_val = "1"
                     if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
                         faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
-                    elif "Faixa FIEPA (1 a 6) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEPA (1 a 6) (Opcional)")) and plano_oficial == "PREVFIEPA":
-                        faixa_val = str(row.get("Faixa FIEPA (1 a 6) (Opcional)")).split('.')[0].strip()
                     faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
                     
                     salario_descob = calcular_salario_reverso(plano_oficial, contribuicao_alvo, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)
@@ -1205,7 +1135,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit (7,28%)"},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.521,45 e R$ 5.042,89)"},
-        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
+        {"Plano": "PREVFIEPA", "Indexador": "UR", "Valor (R$)": "3.674,66", "Regra de Cálculo": "Faixas Cascata: 3% (Até 1 UR) | 5% (1 a 2 URs) | 12% (Acima)"},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%"},
         {"Plano": "PREVISC", "Indexador": "UR", "Valor (R$)": "710,76", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima)"},
