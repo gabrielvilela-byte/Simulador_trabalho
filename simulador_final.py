@@ -607,6 +607,14 @@ if menu_selecionado == "Simulador Individual":
         | **3** | 1,50% | 2,50% | 11,50% |
         """)
         faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3"], horizontal=True, key="faixa_fiema")
+        
+    elif plano_selecionado == "PREVFIEPA":
+        st.markdown("""
+        **Estrutura de Contribuição do Plano (Cascata Automática):**
+        | Faixa Base (Até 1 UR) | Faixa Intermediária (De 1 a 2 URs) | Faixa Topo (Acima de 2 URs) |
+        |:---:|:---:|:---:|
+        | 3,00% | 5,00% | 12,00% |
+        """)
 
     st.divider()
     aba_normal, aba_reversa = st.tabs(["📊 Cálculo de Contribuição", "🔍 Cálculo de Salário"])
@@ -798,6 +806,14 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         | **3** | 1,50% | 2,50% | 11,50% |
         """)
         faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3"], horizontal=True, key="faixa_fiema_auto")
+        
+    elif plano_selecionado == "PREVFIEPA":
+        st.markdown("""
+        **Estrutura de Contribuição do Plano (Cascata Automática):**
+        | Faixa Base (Até 1 UR) | Faixa Intermediária (De 1 a 2 URs) | Faixa Topo (Acima de 2 URs) |
+        |:---:|:---:|:---:|
+        | 3,00% | 5,00% | 12,00% |
+        """)
 
     st.divider()
 
@@ -845,7 +861,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     
                     st.success(f"**Cobrança Mensal Total (Boleto):** R$ {formatar_br(total_cobranca)}")
                     
-                    st.markdown("#### Detalhamento da Contribuição (Participante)")
+                    st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
                     col_f1, col_f2, col_f3 = st.columns(3)
                     col_f1.metric("Faixa Base (Até 1 UR)", f"R$ {formatar_br(f1)}")
                     col_f2.metric("Faixas Intermédias (1 a 2 URs)", f"R$ {formatar_br(f2)}")
