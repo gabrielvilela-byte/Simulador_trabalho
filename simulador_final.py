@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+from decimal import Decimal, ROUND_HALF_UP
 
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
@@ -75,6 +76,11 @@ planos_com_risco = ["FIESCPREV", "SESC SC (SESCPREV)", "PREVISC SENAI-MA", "SENA
 # =================================================================
 # 3. MOTORES MATEMÁTICOS E FORMATAÇÃO
 # =================================================================
+
+def arredondar(valor):
+    """Aplica o arredondamento financeiro oficial de 2 casas decimais (Round Half Up)."""
+    return float(Decimal(f"{valor:.5f}").quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+
 def formatar_br(valor):
     if isinstance(valor, (int, float)):
         return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -141,9 +147,9 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         
     if tipo == "up_sem_teto":
         aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
-        total_bruto = salario * aliq_aplicar
-        superavit = total_bruto * taxa_superavit
-        return (total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
+        total_bruto = arredondar(salario * aliq_aplicar)
+        superavit = arredondar(total_bruto * taxa_superavit)
+        return arredondar(total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"] 
@@ -158,9 +164,9 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
                 aliq = 0.05
             else: 
                 aliq = 0.06
-        total_bruto = salario * aliq
-        superavit = total_bruto * taxa_superavit
-        return (total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
+        total_bruto = arredondar(salario * aliq)
+        superavit = arredondar(total_bruto * taxa_superavit)
+        return arredondar(total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
 
     if tipo == "faixas_quadruplas_fiea":
         up = plano["ur"]
@@ -170,23 +176,23 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         f1 = f2 = f3 = f4 = 0.0
         
         if salario <= teto1:
-            f1 = salario * plano["aliq_1"]
+            f1 = arredondar(salario * plano["aliq_1"])
         elif salario <= teto2:
-            f1 = teto1 * plano["aliq_1"]
-            f2 = (salario - teto1) * plano["aliq_2"]
+            f1 = arredondar(teto1 * plano["aliq_1"])
+            f2 = arredondar((salario - teto1) * plano["aliq_2"])
         elif salario <= teto3:
-            f1 = teto1 * plano["aliq_1"]
-            f2 = (teto2 - teto1) * plano["aliq_2"]
-            f3 = (salario - teto2) * plano["aliq_3"]
+            f1 = arredondar(teto1 * plano["aliq_1"])
+            f2 = arredondar((teto2 - teto1) * plano["aliq_2"])
+            f3 = arredondar((salario - teto2) * plano["aliq_3"])
         else:
-            f1 = teto1 * plano["aliq_1"]
-            f2 = (teto2 - teto1) * plano["aliq_2"]
-            f3 = (teto3 - teto2) * plano["aliq_3"]
-            f4 = (salario - teto3) * plano["aliq_4"]
+            f1 = arredondar(teto1 * plano["aliq_1"])
+            f2 = arredondar((teto2 - teto1) * plano["aliq_2"])
+            f3 = arredondar((teto3 - teto2) * plano["aliq_3"])
+            f4 = arredondar((salario - teto3) * plano["aliq_4"])
             
-        total_bruto = f1 + f2 + f3 + f4
-        superavit = total_bruto * taxa_superavit
-        return (total_bruto - superavit), f1, (f2 + f3), f4, superavit
+        total_bruto = arredondar(f1 + f2 + f3 + f4)
+        superavit = arredondar(total_bruto * taxa_superavit)
+        return arredondar(total_bruto - superavit), f1, arredondar(f2 + f3), f4, superavit
 
     if tipo == "faixas_univali":
         teto_rs = plano["ur"] * plano["teto_urs"]
@@ -199,15 +205,15 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
                 aliq_2 = 0.17
                     
         if salario <= teto_rs:
-            f1 = salario * plano["aliq_1"]
+            f1 = arredondar(salario * plano["aliq_1"])
             f2 = 0.0
         else:
-            f1 = teto_rs * plano["aliq_1"]
-            f2 = (salario - teto_rs) * aliq_2
+            f1 = arredondar(teto_rs * plano["aliq_1"])
+            f2 = arredondar((salario - teto_rs) * aliq_2)
             
-        total_bruto = f1 + f2
-        superavit = total_bruto * taxa_superavit
-        return (total_bruto - superavit), f1, f2, 0.0, superavit
+        total_bruto = arredondar(f1 + f2)
+        superavit = arredondar(total_bruto * taxa_superavit)
+        return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
 
     if tipo == "sesc_triplo":
         ur = plano["ur"]
@@ -215,22 +221,22 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         teto2_rs = plano["teto2_rs"]
         
         if salario <= teto1_rs:
-            total_bruto = salario * plano["aliq_1"]
+            total_bruto = arredondar(salario * plano["aliq_1"])
             f1 = total_bruto
             f2 = f3 = 0.0
         elif salario <= teto2_rs:
-            total_bruto = (salario * plano["aliq_2"]) - (0.4190 * ur)
-            f1 = teto1_rs * plano["aliq_1"]
-            f2 = total_bruto - f1
+            total_bruto = arredondar((salario * plano["aliq_2"]) - (0.4190 * ur))
+            f1 = arredondar(teto1_rs * plano["aliq_1"])
+            f2 = arredondar(total_bruto - f1)
             f3 = 0.0
         else:
-            total_bruto = (salario * plano["aliq_3"]) - (1.3424 * ur)
-            f1 = teto1_rs * plano["aliq_1"]
-            f2 = ((teto2_rs * plano["aliq_2"]) - (0.4190 * ur)) - f1
-            f3 = total_bruto - f1 - f2
+            total_bruto = arredondar((salario * plano["aliq_3"]) - (1.3424 * ur))
+            f1 = arredondar(teto1_rs * plano["aliq_1"])
+            f2 = arredondar(((teto2_rs * plano["aliq_2"]) - (0.4190 * ur)) - f1)
+            f3 = arredondar(total_bruto - f1 - f2)
             
-        superavit = total_bruto * taxa_superavit
-        return (total_bruto - superavit), f1, f2, f3, superavit
+        superavit = arredondar(total_bruto * taxa_superavit)
+        return arredondar(total_bruto - superavit), f1, f2, f3, superavit
 
     if tipo == "faixas_triplas_senai":
         ur = plano["ur"]
@@ -238,20 +244,20 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         teto2_rs = ur * plano["teto2_urs"]
         
         if salario <= teto1_rs:
-            f1 = salario * plano["aliq_1"]
+            f1 = arredondar(salario * plano["aliq_1"])
             f2 = f3 = 0.0
         elif salario <= teto2_rs:
-            f1 = teto1_rs * plano["aliq_1"]
-            f2 = (salario - teto1_rs) * plano["aliq_2"]
+            f1 = arredondar(teto1_rs * plano["aliq_1"])
+            f2 = arredondar((salario - teto1_rs) * plano["aliq_2"])
             f3 = 0.0
         else:
-            f1 = teto1_rs * plano["aliq_1"]
-            f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
-            f3 = (salario - teto2_rs) * plano["aliq_3"]
+            f1 = arredondar(teto1_rs * plano["aliq_1"])
+            f2 = arredondar((teto2_rs - teto1_rs) * plano["aliq_2"])
+            f3 = arredondar((salario - teto2_rs) * plano["aliq_3"])
             
-        total_bruto = f1 + f2 + f3
-        superavit = total_bruto * taxa_superavit
-        return (total_bruto - superavit), f1, f2, f3, superavit
+        total_bruto = arredondar(f1 + f2 + f3)
+        superavit = arredondar(total_bruto * taxa_superavit)
+        return arredondar(total_bruto - superavit), f1, f2, f3, superavit
         
     if tipo == "faixas_triplas_fiema":
         teto1_rs = plano["teto1_rs"]
@@ -265,18 +271,18 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
             a1, a2, a3 = 0.0210, 0.0350, 0.1610
             
         if salario <= teto1_rs:
-            f1 = salario * a1
+            f1 = arredondar(salario * a1)
             f2 = f3 = 0.0
         elif salario <= teto2_rs:
-            f1 = teto1_rs * a1
-            f2 = (salario - teto1_rs) * a2
+            f1 = arredondar(teto1_rs * a1)
+            f2 = arredondar((salario - teto1_rs) * a2)
             f3 = 0.0
         else:
-            f1 = teto1_rs * a1
-            f2 = (teto2_rs - teto1_rs) * a2
-            f3 = (salario - teto2_rs) * a3
+            f1 = arredondar(teto1_rs * a1)
+            f2 = arredondar((teto2_rs - teto1_rs) * a2)
+            f3 = arredondar((salario - teto2_rs) * a3)
             
-        total_bruto = f1 + f2 + f3
+        total_bruto = arredondar(f1 + f2 + f3)
         return total_bruto, f1, f2, f3, 0.0
 
     if tipo == "faixas_triplas_fiepa":
@@ -285,31 +291,31 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         teto2_rs = ur * 2.0
         
         if salario <= teto1_rs:
-            f1 = salario * plano["aliq_1"]
+            f1 = arredondar(salario * plano["aliq_1"])
             f2 = f3 = 0.0
         elif salario <= teto2_rs:
-            f1 = teto1_rs * plano["aliq_1"]
-            f2 = (salario - teto1_rs) * plano["aliq_2"]
+            f1 = arredondar(teto1_rs * plano["aliq_1"])
+            f2 = arredondar((salario - teto1_rs) * plano["aliq_2"])
             f3 = 0.0
         else:
-            f1 = teto1_rs * plano["aliq_1"]
-            f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
-            f3 = (salario - teto2_rs) * plano["aliq_3"]
+            f1 = arredondar(teto1_rs * plano["aliq_1"])
+            f2 = arredondar((teto2_rs - teto1_rs) * plano["aliq_2"])
+            f3 = arredondar((salario - teto2_rs) * plano["aliq_3"])
             
-        total_bruto = f1 + f2 + f3
+        total_bruto = arredondar(f1 + f2 + f3)
         return total_bruto, f1, f2, f3, 0.0
 
     teto_rs = plano["ur"] * plano["teto_urs"]
     if salario <= teto_rs:
-        f1 = salario * plano["aliq_1"]
+        f1 = arredondar(salario * plano["aliq_1"])
         f2 = 0.0
     else:
-        f1 = teto_rs * plano["aliq_1"]
-        f2 = (salario - teto_rs) * plano["aliq_2"]
+        f1 = arredondar(teto_rs * plano["aliq_1"])
+        f2 = arredondar((salario - teto_rs) * plano["aliq_2"])
         
-    total_bruto = f1 + f2
-    superavit = total_bruto * taxa_superavit
-    return (total_bruto - superavit), f1, f2, 0.0, superavit
+    total_bruto = arredondar(f1 + f2)
+    superavit = arredondar(total_bruto * taxa_superavit)
+    return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
 
 
 def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
@@ -453,6 +459,7 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
     else:
         return teto_rs + ((contribuicao - max_f1) / plano["aliq_2"])
 
+
 def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
     salario_base = _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao)
     if salario_base == 0.0:
@@ -470,24 +477,23 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
     tx_adm = plano.get("tx_adm", 0.0)
     
     if plano_nome == "FIEMTPREV":
-        taxa_adm = (contrib_pura * 2) * tx_adm
-        contrib_patr = contrib_pura - taxa_adm
-        return contrib_pura + contrib_patr + taxa_adm
+        taxa_adm = arredondar((contrib_pura * 2) * tx_adm)
+        contrib_patr = arredondar(contrib_pura - taxa_adm)
+        return arredondar(contrib_pura + contrib_patr + taxa_adm)
         
     elif plano_nome == "PREVFIEPA":
-        return contrib_pura * 2
+        return arredondar(contrib_pura * 2)
         
     tx_risco = plano.get("tx_risco_auto", plano.get("tx_risco", 0.0))
     tem_risco = plano_nome in planos_com_risco
-    valor_risco = salario * tx_risco if tem_risco else 0.0
+    valor_risco = arredondar(salario * tx_risco) if tem_risco else 0.0
     
     if plano.get("base_adm_com_risco", False):
-        valor_adm_base = (contrib_pura + valor_risco) * tx_adm
+        valor_adm_base = arredondar((contrib_pura + valor_risco) * tx_adm)
     else:
-        valor_adm_base = contrib_pura * tx_adm
+        valor_adm_base = arredondar(contrib_pura * tx_adm)
     
-    valor_adm = valor_adm_base
-    return contrib_pura + valor_adm + valor_risco
+    return arredondar(contrib_pura + valor_adm_base + valor_risco)
 
 def descobrir_salario_autopatrocinio(plano_nome, cobranca_alvo, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
     low, high = 0.0, 1000000.0
@@ -692,19 +698,19 @@ if menu_selecionado == "Simulador Individual":
                 tx_risco_plano = plano_dados.get("tx_risco", 0.0)
                 
                 tem_risco_escolhido = "(Com Risco)" in categoria_participante
-                valor_risco = salario_input * tx_risco_plano if tem_risco_escolhido else 0.0
+                valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco_escolhido else 0.0
                 
                 if plano_dados.get("base_adm_com_risco", False):
-                    taxa_adm_patr = (total + valor_risco) * tx_adm_plano
-                    taxa_adm_total = taxa_adm_patr * 2
+                    taxa_adm_patr = arredondar((total + valor_risco) * tx_adm_plano)
+                    taxa_adm_total = arredondar(taxa_adm_patr * 2)
                 else:
-                    taxa_adm_patr = total * tx_adm_plano
-                    taxa_adm_total = taxa_adm_patr * 2
+                    taxa_adm_patr = arredondar(total * tx_adm_plano)
+                    taxa_adm_total = arredondar(taxa_adm_patr * 2)
                 
                 c_patr_bruta = total
                 
                 if "Não Migrante" in categoria_participante:
-                    c_patr_exibir = c_patr_bruta - taxa_adm_total - valor_risco
+                    c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
                 else:
                     c_patr_exibir = c_patr_bruta
                     
@@ -810,18 +816,21 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
             aliq_input_auto_str = st.text_input("Alíquota de Contribuição (%):", value=aliq_padrao_auto, key="aliq_auto_norm")
             aliq_escolhida_auto = converter_br(aliq_input_auto_str) / 100
             
+        if plano_selecionado == "PREVFIEPA":
+            st.info(f"A UR atual adotada para o plano PREVFIEPA é de R$ {formatar_br(plano_dados['ur'])}")
+            
         if st.button("Gerar Cálculo de Cobrança", type="primary"):
             if salario_input > 0:
                 tx_adm_plano = plano_dados.get("tx_adm", 0.0)
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
                 
-                contrib_pura = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida_auto, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)[0]
+                contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida_auto, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
                 if plano_selecionado == "FIEMTPREV":
-                    taxa_adm_total = (contrib_pura * 2) * tx_adm_plano
-                    contrib_patr = contrib_pura - taxa_adm_total
-                    total_cobranca = contrib_pura + contrib_patr + taxa_adm_total
+                    taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                    contrib_patr = arredondar(contrib_pura - taxa_adm_total)
+                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total)
                     
                     st.success(f"**Cobrança Mensal Total (Boleto):** R$ {formatar_br(total_cobranca)}")
                     st.markdown("### Composição do Boleto")
@@ -832,9 +841,16 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     
                 elif plano_selecionado == "PREVFIEPA":
                     contrib_patr = contrib_pura
-                    total_cobranca = contrib_pura + contrib_patr
+                    total_cobranca = arredondar(contrib_pura + contrib_patr)
                     
                     st.success(f"**Cobrança Mensal Total (Boleto):** R$ {formatar_br(total_cobranca)}")
+                    
+                    st.markdown("#### Detalhamento da Contribuição (Participante)")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    col_f1.metric("Faixa Base (Até 1 UR)", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Faixas Intermédias (1 a 2 URs)", f"R$ {formatar_br(f2)}")
+                    col_f3.metric("Faixa Topo (> 2 URs)", f"R$ {formatar_br(f3)}")
+                    
                     st.markdown("### Composição do Boleto")
                     col_b1, col_b2, col_b3 = st.columns(3)
                     col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
@@ -842,14 +858,14 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b3.metric("Taxas (Adm/Risco)", "0% (Isento)")
                     
                 else:
-                    valor_risco = salario_input * tx_risco_plano if tem_risco else 0.0
+                    valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
                     
                     if plano_dados.get("base_adm_com_risco", False):
-                        valor_adm = (contrib_pura + valor_risco) * tx_adm_plano
+                        valor_adm = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
                     else:
-                        valor_adm = contrib_pura * tx_adm_plano
+                        valor_adm = arredondar(contrib_pura * tx_adm_plano)
                     
-                    total_cobranca = contrib_pura + valor_adm + valor_risco
+                    total_cobranca = arredondar(contrib_pura + valor_adm + valor_risco)
                     
                     st.success(f"**Cobrança Mensal Total (Boleto):** R$ {formatar_br(total_cobranca)}")
                     
@@ -897,11 +913,11 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 salario_encontrado = descobrir_salario_autopatrocinio(plano_selecionado, cobranca_input, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
                 if salario_encontrado > 0:
-                    contrib_pura = calcular_contribuicao(plano_selecionado, salario_encontrado, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)[0]
+                    contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_encontrado, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                     
                     if plano_selecionado == "FIEMTPREV":
-                        taxa_adm_total = (contrib_pura * 2) * tx_adm_plano
-                        contrib_patr = contrib_pura - taxa_adm_total
+                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                        contrib_patr = arredondar(contrib_pura - taxa_adm_total)
                         
                         st.success(f"**Salário Correspondente Necessário:** R$ {formatar_br(salario_encontrado)}")
                         st.markdown("### Composição do Boleto")
@@ -914,6 +930,13 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         contrib_patr = contrib_pura
                         
                         st.success(f"**Salário Correspondente Necessário:** R$ {formatar_br(salario_encontrado)}")
+                        
+                        st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
+                        col_f1, col_f2, col_f3 = st.columns(3)
+                        col_f1.metric("Faixa Base (Até 1 UR)", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Faixas Intermédias (1 a 2 URs)", f"R$ {formatar_br(f2)}")
+                        col_f3.metric("Faixa Topo (> 2 URs)", f"R$ {formatar_br(f3)}")
+                        
                         st.markdown("### Composição do Boleto")
                         col_b1, col_b2, col_b3 = st.columns(3)
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
@@ -921,11 +944,11 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b3.metric("Taxas (Adm/Risco)", "0% (Isento)")
                         
                     else:
-                        valor_risco = salario_encontrado * tx_risco_plano if tem_risco else 0.0
+                        valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
                         if plano_dados.get("base_adm_com_risco", False):
-                            valor_adm = (contrib_pura + valor_risco) * tx_adm_plano
+                            valor_adm = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
                         else:
-                            valor_adm = contrib_pura * tx_adm_plano
+                            valor_adm = arredondar(contrib_pura * tx_adm_plano)
                         
                         st.success(f"**Salário Correspondente Necessário:** R$ {formatar_br(salario_encontrado)}")
                         
@@ -1009,7 +1032,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
                     faixa_val = "1"
                     if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
                         faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
-                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
+                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3"] else "Faixa 1"
                     
                     total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)[0]
                     resultados.append(total_pagar)
@@ -1092,7 +1115,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                     faixa_val = "1"
                     if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
                         faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
-                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
+                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3"] else "Faixa 1"
                     
                     salario_descob = calcular_salario_reverso(plano_oficial, contribuicao_alvo, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)
                     
