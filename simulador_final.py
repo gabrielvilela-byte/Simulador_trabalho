@@ -54,7 +54,7 @@ planos = {
     "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_univali"},
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.0172, "aliq_2": 0.1377, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "SESC SC (SESCPREV)": {"ur": 922.63, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tx_adm": 0.0218, "tx_risco": 0.0012, "tipo": "sesc_triplo"},
-    "LUNELLIPREV": {"ur": 535.87, "teto_urs": 0, "aliq_1": 0.01, "aliq_2": 0, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "up_sem_teto"},
+    "LUNELLIPREV": {"aliq_1": 0.01, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "lunelliprev"},
     "PREVIFIEA": {"ur": 5998.34, "aliq_1": 0.03, "aliq_2": 0.05, "aliq_3": 0.12, "aliq_4": 0.15, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiea"},
     "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "fixo"},
     "UNERJPREV": {"ur": 8475.55, "teto_urs": 1.0, "aliq_1": 0.0025, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "unerjprev_idade"} 
@@ -146,10 +146,16 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         return 0.0, 0.0, 0.0, 0.0, 0.0
         
     if tipo == "up_sem_teto":
-        aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
+        aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
         total_bruto = arredondar(salario * aliq_aplicar)
         superavit = arredondar(total_bruto * taxa_superavit)
         return arredondar(total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
+
+    if tipo == "lunelliprev":
+        aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
+        aliq_aplicar = max(aliq_aplicar, 0.01) # Mínimo obrigatório de 1%
+        total_bruto = arredondar(salario * aliq_aplicar)
+        return total_bruto, total_bruto, 0.0, 0.0, 0.0
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"] 
@@ -351,7 +357,12 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
         return 0.0 
         
     if tipo == "up_sem_teto":
-        aliq_aplicar = aliq_escolhida if aliq_escolhida else plano["aliq_1"]
+        aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
+        return contribuicao / aliq_aplicar
+
+    if tipo == "lunelliprev":
+        aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
+        aliq_aplicar = max(aliq_aplicar, 0.01)
         return contribuicao / aliq_aplicar
         
     if tipo == "unerjprev_idade":
@@ -519,6 +530,10 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         
     elif plano_nome == "PREVFIEPA":
         return arredondar(contrib_pura * 2)
+
+    elif plano_nome == "LUNELLIPREV":
+        contrib_patr = arredondar(contrib_pura * 0.10)
+        return arredondar(contrib_pura + contrib_patr)
         
     tx_risco = plano.get("tx_risco_auto", plano.get("tx_risco", 0.0))
     tem_risco = plano_nome in planos_com_risco
@@ -668,11 +683,14 @@ if menu_selecionado == "Simulador Individual":
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida = None
-        if plano_dados.get("tipo") == "up_sem_teto":
-            st.info(f"A UP atual deste plano é de R$ {formatar_br(plano_dados['ur'])}")
-            if salario_input > 0:
-                qtd_ups = salario_input / plano_dados["ur"]
-                st.write(f"O seu salário equivale a **{formatar_br(qtd_ups)} UPs**.")
+        if plano_dados.get("tipo") in ["up_sem_teto", "lunelliprev"]:
+            if plano_dados.get("tipo") == "up_sem_teto":
+                st.info(f"A UP atual deste plano é de R$ {formatar_br(plano_dados['ur'])}")
+                if salario_input > 0:
+                    qtd_ups = salario_input / plano_dados["ur"]
+                    st.write(f"O seu salário equivale a **{formatar_br(qtd_ups)} UPs**.")
+            elif plano_dados.get("tipo") == "lunelliprev":
+                st.info("A Contribuição Básica é de livre escolha do participante, respeitando o mínimo obrigatório de 1% sobre o Salário.")
             
             aliq_padrao = formatar_br(plano_dados["aliq_1"] * 100)
             aliq_input_str = st.text_input("Alíquota de Contribuição (%):", value=aliq_padrao, key="aliq_normal")
@@ -700,6 +718,11 @@ if menu_selecionado == "Simulador Individual":
                 
                 elif plano_dados.get("tipo") in ["up_sem_teto", "unerjprev_idade"]:
                     st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
+                elif plano_dados.get("tipo") == "lunelliprev":
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
+                    col_f1, col_f2 = st.columns(2)
+                    col_f1.metric("Alíquota Aplicada", f"{formatar_br(max(aliq_escolhida if aliq_escolhida else 0.01, 0.01) * 100)}%")
+                    col_f2.metric("Valor Base", f"R$ {formatar_br(total)}")
                 elif plano_selecionado == "PREVIFIEA":
                     st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
@@ -759,18 +782,27 @@ if menu_selecionado == "Simulador Individual":
                 
                 c_patr_bruta = total
                 
-                if "Não Migrante" in categoria_participante:
-                    c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
+                if plano_selecionado == "LUNELLIPREV":
+                    c_patr_exibir = arredondar(total * 0.10)
                 else:
-                    c_patr_exibir = c_patr_bruta
+                    if "Não Migrante" in categoria_participante:
+                        c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
+                    else:
+                        c_patr_exibir = c_patr_bruta
                     
                 st.divider()
                 st.markdown("#### 🏢 Contrapartida da Patrocinadora e Taxas")
+                
+                if plano_selecionado == "LUNELLIPREV":
+                    st.caption("⚠️ *A patrocinadora (Lunelli) aporta 10% fixo sobre a contribuição do participante, acrescido de um rateio anual variável que depende do fundo global da empresa. O simulador projeta apenas a cota fixa garantida.*")
+                
                 col_p1, col_p2, col_p3 = st.columns(3)
                 
                 col_p1.metric("Contrib. Patrocinadora (Líquida)", f"R$ {formatar_br(c_patr_exibir)}")
                 
-                if tx_adm_plano > 0:
+                if plano_selecionado == "LUNELLIPREV":
+                    col_p2.metric("Taxa Adm Total", "0% (Cobrado do saldo)")
+                elif tx_adm_plano > 0:
                     col_p2.metric(f"Taxa Adm Total ({formatar_br(tx_adm_plano*100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
                 else:
                     col_p2.metric("Taxa Adm Total", "0% (Não configurada)")
@@ -796,7 +828,7 @@ if menu_selecionado == "Simulador Individual":
         contrib_input = converter_br(contrib_input_str)
         
         aliq_escolhida_rev = None
-        if plano_dados.get("tipo") == "up_sem_teto":
+        if plano_dados.get("tipo") in ["up_sem_teto", "lunelliprev"]:
             aliq_padrao_rev = formatar_br(plano_dados["aliq_1"] * 100)
             aliq_input_rev_str = st.text_input("Alíquota Utilizada (%):", value=aliq_padrao_rev, key="aliq_rev")
             aliq_escolhida_rev = converter_br(aliq_input_rev_str) / 100
@@ -874,8 +906,12 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida_auto = None
-        if plano_dados.get("tipo") == "up_sem_teto":
-            st.info(f"A UP atual deste plano é de R$ {formatar_br(plano_dados['ur'])}")
+        if plano_dados.get("tipo") in ["up_sem_teto", "lunelliprev"]:
+            if plano_dados.get("tipo") == "up_sem_teto":
+                st.info(f"A UP atual deste plano é de R$ {formatar_br(plano_dados['ur'])}")
+            elif plano_dados.get("tipo") == "lunelliprev":
+                st.info("A Contribuição Básica é de livre escolha do participante, respeitando o mínimo obrigatório de 1% sobre o Salário.")
+                
             aliq_padrao_auto = formatar_br(plano_dados["aliq_1"] * 100)
             aliq_input_auto_str = st.text_input("Alíquota de Contribuição (%):", value=aliq_padrao_auto, key="aliq_auto_norm")
             aliq_escolhida_auto = converter_br(aliq_input_auto_str) / 100
@@ -920,6 +956,20 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                     col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     col_b3.metric("Taxas (Adm/Risco)", "0% (Isento)")
+
+                elif plano_selecionado == "LUNELLIPREV":
+                    contrib_patr = arredondar(contrib_pura * 0.10)
+                    total_cobranca = arredondar(contrib_pura + contrib_patr)
+                    
+                    st.success(f"**Cobrança Mensal Total (Boleto):** R$ {formatar_br(total_cobranca)}")
+                    st.caption("⚠️ *O Autopatrocinado assume a sua parte e a contrapartida fixa de 10% da patrocinadora. Demais rateios globais não se aplicam.*")
+                    
+                    st.markdown("### Composição do Boleto")
+                    col_b1, col_b2, col_b3 = st.columns(3)
+                    col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                    col_b2.metric("Contrib. Patrocinadora (10%)", f"R$ {formatar_br(contrib_patr)}")
+                    col_b3.metric("Taxas (Adm)", "Isento no Boleto*")
+                    st.caption("*As taxas administrativas (0,50%) são debitadas diretamente do saldo do fundo (recursos garantidores) anualmente.")
                     
                 else:
                     valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
@@ -960,7 +1010,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         cobranca_input = converter_br(cobranca_input_str)
             
         aliq_escolhida_auto_rev = None
-        if plano_dados.get("tipo") == "up_sem_teto":
+        if plano_dados.get("tipo") in ["up_sem_teto", "lunelliprev"]:
             aliq_padrao_auto_rev = formatar_br(plano_dados["aliq_1"] * 100)
             aliq_input_auto_rev_str = st.text_input("Alíquota Utilizada (%):", value=aliq_padrao_auto_rev, key="aliq_auto_rev")
             aliq_escolhida_auto_rev = converter_br(aliq_input_auto_rev_str) / 100
@@ -971,7 +1021,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
                 
-                if tx_adm_plano == 0.0 and tx_risco_plano == 0.0 and plano_selecionado not in ["FIEMTPREV", "PREVFIEPA"]:
+                if tx_adm_plano == 0.0 and tx_risco_plano == 0.0 and plano_selecionado not in ["FIEMTPREV", "PREVFIEPA", "LUNELLIPREV"]:
                     st.warning("⚠️ Atenção: As taxas de administração e risco deste plano não estão cadastradas no sistema.")
                 
                 salario_encontrado = descobrir_salario_autopatrocinio(plano_selecionado, cobranca_input, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
@@ -1006,6 +1056,19 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                         col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxas (Adm/Risco)", "0% (Isento)")
+
+                    elif plano_selecionado == "LUNELLIPREV":
+                        contrib_patr = arredondar(contrib_pura * 0.10)
+                        
+                        st.success(f"**Salário Correspondente Necessário:** R$ {formatar_br(salario_encontrado)}")
+                        st.caption("⚠️ *O Autopatrocinado assume a sua parte e a contrapartida fixa de 10% da patrocinadora. Demais rateios globais não se aplicam.*")
+                        
+                        st.markdown("### Composição do Boleto")
+                        col_b1, col_b2, col_b3 = st.columns(3)
+                        col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                        col_b2.metric("Contrib. Patrocinadora (10%)", f"R$ {formatar_br(contrib_patr)}")
+                        col_b3.metric("Taxas (Adm)", "Isento no Boleto*")
+                        st.caption("*As taxas administrativas (0,50%) são debitadas diretamente do saldo do fundo (recursos garantidores) anualmente.")
                         
                     else:
                         valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
@@ -1237,7 +1300,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Tempo de Contribuição"},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Faixas: 1,72% (Até 1 SP) | 13,77% (Acima) - Taxa Adm: 2,18%"},
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Faixas de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
-        {"Plano": "LUNELLIPREV", "Indexador": "UP", "Valor (R$)": "535,87", "Regra de Cálculo": "Livre Escolha (% Fixo sem Teto sobre a base inteira)"},
+        {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
         {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "5.998,34", "Regra de Cálculo": "Faixas Cascata (SRC): 3% (Até 0,5 UP) | 5% (0,5 a 1) | 12% (1 a 3) | 15% (Acima)"},
         {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo conforme a idade"},
         {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
