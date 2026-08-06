@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 from decimal import Decimal, ROUND_HALF_UP
+from datetime import date
 
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
@@ -652,7 +653,17 @@ if menu_selecionado == "Simulador Individual":
             idade_ou_tempo_input = st.number_input("Tempo de Contrib. (Anos):", min_value=0, max_value=60, value=0, step=1)
             
     if plano_dados.get("tipo") == "unerjprev_idade":
-        idade_ou_tempo_input = st.number_input("Idade do Participante:", min_value=16, max_value=80, value=30, step=1)
+        st.markdown("**Forma de preenchimento da Idade:**")
+        modo_idade = st.radio("Selecione:", ["Digitar a Idade", "Data de Nascimento"], horizontal=True, label_visibility="collapsed", key="modo_idade_ativo")
+        
+        if modo_idade == "Digitar a Idade":
+            idade_ou_tempo_input = st.number_input("Idade do Participante:", min_value=16, max_value=100, value=30, step=1, key="idade_dig_ativo")
+        else:
+            data_nasc = st.date_input("Data de Nascimento:", value=date(1996, 1, 1), min_value=date(1920, 1, 1), max_value=date.today(), format="DD/MM/YYYY", key="data_nasc_ativo")
+            hoje = date.today()
+            idade_calc = hoje.year - data_nasc.year - ((hoje.month, hoje.day) < (data_nasc.month, data_nasc.day))
+            st.info(f"Idade calculada: **{idade_calc} anos**")
+            idade_ou_tempo_input = idade_calc
         
     elif plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
@@ -879,7 +890,17 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
             idade_ou_tempo_input = st.number_input("Tempo de Contrib. (Anos):", min_value=0, max_value=60, value=0, step=1, key="uni_id_auto")
             
     elif plano_dados.get("tipo") == "unerjprev_idade":
-        idade_ou_tempo_input = st.number_input("Idade do Participante:", min_value=16, max_value=80, value=30, step=1, key="unerj_id_auto")
+        st.markdown("**Forma de preenchimento da Idade:**")
+        modo_idade = st.radio("Selecione:", ["Digitar a Idade", "Data de Nascimento"], horizontal=True, label_visibility="collapsed", key="modo_idade_auto")
+        
+        if modo_idade == "Digitar a Idade":
+            idade_ou_tempo_input = st.number_input("Idade do Participante:", min_value=16, max_value=100, value=30, step=1, key="idade_dig_auto")
+        else:
+            data_nasc = st.date_input("Data de Nascimento:", value=date(1996, 1, 1), min_value=date(1920, 1, 1), max_value=date.today(), format="DD/MM/YYYY", key="data_nasc_auto")
+            hoje = date.today()
+            idade_calc = hoje.year - data_nasc.year - ((hoje.month, hoje.day) < (data_nasc.month, data_nasc.day))
+            st.info(f"Idade calculada: **{idade_calc} anos**")
+            idade_ou_tempo_input = idade_calc
         
     elif plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
