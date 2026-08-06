@@ -51,8 +51,7 @@ planos = {
     "PREVFIEPA": {"up": 7740.09, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiepa"},
     "FECOMERCIO": {"ur": 845.22, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
     "FIEMTPREV": {"ur": 715.77, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
-    "PREVISC": {"ur": 710.76, "teto_urs": 7.0, "aliq_1": 0.03, "aliq_2": 0.14, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
-    "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_univali"},
+    "UNIVALIPrevidencia": {"ur": 623.33, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_univali"},
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.0172, "aliq_2": 0.1377, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "SESC SC (SESCPREV)": {"ur": 922.63, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tx_adm": 0.0218, "tx_risco": 0.0012, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"aliq_1": 0.01, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "lunelliprev"},
@@ -160,21 +159,25 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"] 
-        if salario <= teto_inss:
-            aliq = plano["aliq_1"]
-        else:
+        f1 = arredondar(min(salario, teto_inss) * plano["aliq_1"])
+        
+        if salario > teto_inss:
+            excedente = salario - teto_inss
             if idade_ou_tempo <= 44:
-                aliq = 0.03
+                aliq_exc = 0.03
             elif 45 <= idade_ou_tempo <= 49:
-                aliq = 0.04
+                aliq_exc = 0.04
             elif 50 <= idade_ou_tempo <= 54:
-                aliq = 0.05
+                aliq_exc = 0.05
             else: 
-                aliq = 0.06
-                
-        total_bruto = arredondar(salario * aliq)
+                aliq_exc = 0.06
+            f2 = arredondar(excedente * aliq_exc)
+        else:
+            f2 = 0.0
+            
+        total_bruto = arredondar(f1 + f2)
         superavit = arredondar(total_bruto * taxa_superavit)
-        return arredondar(total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
+        return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
 
     if tipo == "faixas_quadruplas_fiea":
         up = plano["ur"]
@@ -343,6 +346,180 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
     total_bruto = arredondar(f1 + f2)
     superavit = arredondar(total_bruto * taxa_superavit)
     return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
+
+
+def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
+    plano = planos.get(plano_nome)
+    if not plano:
+        return 0.0
+        
+    tipo = plano.get("tipo", "faixas")
+    taxa_superavit = plano.get("superavit", 0.0)
+    
+    contribuicao = contribuicao_liquida / (1 - taxa_superavit)
+    
+    if tipo in ["fixo"]:
+        return 0.0 
+        
+    if tipo == "up_sem_teto":
+        aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
+        return contribuicao / aliq_aplicar
+
+    if tipo == "lunelliprev":
+        aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
+        aliq_aplicar = max(aliq_aplicar, 0.01)
+        return contribuicao / aliq_aplicar
+        
+    if tipo == "unerjprev_idade":
+        teto_inss = plano["ur"]
+        max_f1 = arredondar(teto_inss * plano["aliq_1"])
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        else:
+            if idade_ou_tempo <= 44:
+                aliq_exc = 0.03
+            elif 45 <= idade_ou_tempo <= 49:
+                aliq_exc = 0.04
+            elif 50 <= idade_ou_tempo <= 54:
+                aliq_exc = 0.05
+            else: 
+                aliq_exc = 0.06
+            return teto_inss + ((contribuicao - max_f1) / aliq_exc)
+
+    if tipo == "faixas_quadruplas_fiea":
+        up = plano["ur"]
+        teto1 = up * 0.5
+        teto2 = up
+        teto3 = up * 3.0
+        
+        max_f1 = teto1 * plano["aliq_1"]
+        max_f2 = (teto2 - teto1) * plano["aliq_2"]
+        max_f3 = (teto3 - teto2) * plano["aliq_3"]
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        elif contribuicao <= (max_f1 + max_f2):
+            return teto1 + ((contribuicao - max_f1) / plano["aliq_2"])
+        elif contribuicao <= (max_f1 + max_f2 + max_f3):
+            return teto2 + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
+        else:
+            return teto3 + ((contribuicao - max_f1 - max_f2 - max_f3) / plano["aliq_4"])
+
+    if tipo == "faixas_quadruplas_fiepa":
+        up = plano["up"]
+        teto1 = up * 0.5
+        teto2 = up * 1.0
+        teto3 = up * 3.0
+        
+        if faixa_opcao == "Faixa 2":
+            a1, a2, a3, a4 = 0.0270, 0.0450, 0.1080, 0.1350
+        elif faixa_opcao == "Faixa 3":
+            a1, a2, a3, a4 = 0.0240, 0.0400, 0.0960, 0.1200
+        elif faixa_opcao == "Faixa 4":
+            a1, a2, a3, a4 = 0.0210, 0.0350, 0.0840, 0.1050
+        elif faixa_opcao == "Faixa 5":
+            a1, a2, a3, a4 = 0.0180, 0.0300, 0.0720, 0.0900
+        elif faixa_opcao == "Faixa 6":
+            a1, a2, a3, a4 = 0.0150, 0.0250, 0.0600, 0.0750
+        else: 
+            a1, a2, a3, a4 = 0.0300, 0.0500, 0.1200, 0.1500
+            
+        max_f1 = teto1 * a1
+        max_f2 = (teto2 - teto1) * a2
+        max_f3 = (teto3 - teto2) * a3
+        
+        if contribuicao <= max_f1:
+            return contribuicao / a1
+        elif contribuicao <= (max_f1 + max_f2):
+            return teto1 + ((contribuicao - max_f1) / a2)
+        elif contribuicao <= (max_f1 + max_f2 + max_f3):
+            return teto2 + ((contribuicao - max_f1 - max_f2) / a3)
+        else:
+            return teto3 + ((contribuicao - max_f1 - max_f2 - max_f3) / a4)
+
+    if tipo == "faixas_univali":
+        teto_rs = plano["ur"] * plano["teto_urs"]
+        max_f1 = teto_rs * plano["aliq_1"]
+        
+        if univali_migrante == "Migrante":
+            aliq_2 = 0.14
+        else:
+            if univali_tipo == "Reduzida":
+                aliq_2 = 0.14
+            else:
+                aliq_2 = 0.17
+                    
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        else:
+            return teto_rs + ((contribuicao - max_f1) / aliq_2)
+
+    if tipo == "sesc_triplo":
+        ur = plano["ur"]
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
+        
+        max_c1 = teto1_rs * plano["aliq_1"]
+        max_c2 = (teto2_rs * plano["aliq_2"]) - (0.4190 * ur)
+        
+        if contribuicao <= max_c1:
+            return contribuicao / plano["aliq_1"]
+        elif contribuicao <= max_c2:
+            return (contribuicao + (0.4190 * ur)) / plano["aliq_2"]
+        else:
+            return (contribuicao + (1.3424 * ur)) / plano["aliq_3"]
+
+    if tipo == "faixas_triplas_senai":
+        ur = plano["ur"]
+        teto1_rs = ur * plano["teto1_urs"]
+        teto2_rs = ur * plano["teto2_urs"]
+        max_f1 = teto1_rs * plano["aliq_1"]
+        max_f2 = (teto2_rs - teto1_rs) * plano["aliq_2"]
+        
+        if contribuicao <= max_f1:
+            return contribuicao / plano["aliq_1"]
+        elif contribuicao <= max_f1 + max_f2:
+            return teto1_rs + ((contribuicao - max_f1) / plano["aliq_2"])
+        else:
+            return teto2_rs + ((contribuicao - max_f1 - max_f2) / plano["aliq_3"])
+            
+    if tipo == "faixas_triplas_fiema":
+        teto1_rs = plano["teto1_rs"]
+        teto2_rs = plano["teto2_rs"]
+        
+        if faixa_opcao == "Faixa 2":
+            a1, a2, a3 = 0.0180, 0.0300, 0.1380
+        elif faixa_opcao == "Faixa 3":
+            a1, a2, a3 = 0.0150, 0.0250, 0.1150
+        else: 
+            a1, a2, a3 = 0.0210, 0.0350, 0.1610
+            
+        max_f1 = teto1_rs * a1
+        max_f2 = (teto2_rs - teto1_rs) * a2
+        
+        if contribuicao <= max_f1:
+            return contribuicao / a1
+        elif contribuicao <= max_f1 + max_f2:
+            return teto1_rs + ((contribuicao - max_f1) / a2)
+        else:
+            return teto2_rs + ((contribuicao - max_f1 - max_f2) / a3)
+
+    teto_rs = plano["ur"] * plano["teto_urs"]
+    max_f1 = teto_rs * plano["aliq_1"]
+    if contribuicao <= max_f1:
+        return contribuicao / plano["aliq_1"]
+    else:
+        return teto_rs + ((contribuicao - max_f1) / plano["aliq_2"])
+
+
+def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
+    salario_base = _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao)
+    if salario_base == 0.0:
+        return 0.0
+        
+    funcao_teste = lambda s: calcular_contribuicao(plano_nome, s, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao)[0]
+    return refinar_centro_arredondamento(salario_base, contribuicao_liquida, funcao_teste)
 
 
 # --- NOVOS MOTORES PARA SOMAR PATROCINADORA EM ATIVOS ---
@@ -514,12 +691,12 @@ if menu_selecionado == "Simulador Individual":
     else:
         col_u1, col_u2, col_u3 = st.columns(3)
         with col_u1:
-            univali_migrante = st.radio("Categoria:", ["Migrante", "Não Migrante"])
+            univali_migrante = st.radio("Categoria:", ["Migrante", "Não Migrante"], key="uni_cat_ativo")
             categoria_participante = univali_migrante
         with col_u2:
-            univali_tipo = st.radio("Contribuição:", ["Normal", "Reduzida"])
+            univali_tipo = st.radio("Contribuição:", ["Normal", "Reduzida"], key="uni_tip_ativo")
         with col_u3:
-            idade_ou_tempo_input = st.number_input("Tempo de Contrib. (Anos):", min_value=0, max_value=60, value=0, step=1)
+            idade_ou_tempo_input = st.number_input("Tempo de Empresa (Anos):", min_value=0, max_value=60, value=0, step=1, key="uni_temp_ativo")
             
     if plano_dados.get("tipo") == "unerjprev_idade":
         st.markdown("**Forma de preenchimento da Idade:**")
@@ -624,6 +801,12 @@ if menu_selecionado == "Simulador Individual":
                     col_f1, col_f2 = st.columns(2)
                     col_f1.metric("Alíquota Aplicada", f"{formatar_br(max(aliq_escolhida if aliq_escolhida else 0.01, 0.01) * 100)}%")
                     col_f2.metric("Valor Base", f"R$ {formatar_br(total)}")
+                elif plano_selecionado == "UNIVALIPrevidencia":
+                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    col_f1.metric(f"Faixa Base (Até R$ {formatar_br(plano_dados['ur'] * 8)})", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Faixa Excedente", f"R$ {formatar_br(f2)}")
+                    col_f3.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(total)}")
                 elif plano_selecionado == "PREVIFIEA":
                     st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
@@ -738,7 +921,7 @@ if menu_selecionado == "Simulador Individual":
             
         if st.button("Descobrir Salário", type="primary"):
             if contrib_input > 0:
-                salario_descob = descobrir_salario_ativo(plano_selecionado, contrib_input, aliq_escolhida_rev, categoria_participante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
+                salario_descob = descobrir_salario_ativo(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 if salario_descob == 0:
                     st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas.")
                 else:
@@ -764,11 +947,11 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
     if plano_selecionado == "UNIVALIPrevidencia":
         col_u1, col_u2, col_u3 = st.columns(3)
         with col_u1:
-            univali_migrante = st.radio("Categoria:", ["Migrante", "Não Migrante"], key="uni_mig_auto")
+            univali_migrante = st.radio("Categoria:", ["Migrante", "Não Migrante"], key="uni_cat_auto")
         with col_u2:
             univali_tipo = st.radio("Contribuição:", ["Normal", "Reduzida"], key="uni_tip_auto")
         with col_u3:
-            idade_ou_tempo_input = st.number_input("Tempo de Contrib. (Anos):", min_value=0, max_value=60, value=0, step=1, key="uni_id_auto")
+            idade_ou_tempo_input = st.number_input("Tempo de Empresa (Anos):", min_value=0, max_value=60, value=0, step=1, key="uni_temp_auto")
             
     elif plano_dados.get("tipo") == "unerjprev_idade":
         st.markdown("**Forma de preenchimento da Idade:**")
@@ -1306,8 +1489,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%"},
-        {"Plano": "PREVISC", "Indexador": "UR", "Valor (R$)": "710,76", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima)"},
-        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% a 17% variando por Categoria e Tempo de Contribuição"},
+        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "623,33", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18%"},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Faixas: 1,72% (Até 1 SP) | 13,77% (Acima) - Taxa Adm: 2,18%"},
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Faixas de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
