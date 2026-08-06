@@ -160,25 +160,21 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"] 
-        f1 = arredondar(min(salario, teto_inss) * plano["aliq_1"])
-        
-        if salario > teto_inss:
-            excedente = salario - teto_inss
-            if idade_ou_tempo <= 44:
-                aliq_exc = 0.03
-            elif 45 <= idade_ou_tempo <= 49:
-                aliq_exc = 0.04
-            elif 50 <= idade_ou_tempo <= 54:
-                aliq_exc = 0.05
-            else: 
-                aliq_exc = 0.06
-            f2 = arredondar(excedente * aliq_exc)
+        if salario <= teto_inss:
+            aliq = plano["aliq_1"]
         else:
-            f2 = 0.0
-            
-        total_bruto = arredondar(f1 + f2)
+            if idade_ou_tempo <= 44:
+                aliq = 0.03
+            elif 45 <= idade_ou_tempo <= 49:
+                aliq = 0.04
+            elif 50 <= idade_ou_tempo <= 54:
+                aliq = 0.05
+            else: 
+                aliq = 0.06
+                
+        total_bruto = arredondar(salario * aliq)
         superavit = arredondar(total_bruto * taxa_superavit)
-        return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
+        return arredondar(total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
 
     if tipo == "faixas_quadruplas_fiea":
         up = plano["ur"]
@@ -373,9 +369,9 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"]
-        max_f1 = arredondar(teto_inss * plano["aliq_1"])
+        max_025 = arredondar(teto_inss * plano["aliq_1"])
         
-        if contribuicao <= max_f1:
+        if contribuicao <= max_025:
             return contribuicao / plano["aliq_1"]
         else:
             if idade_ou_tempo <= 44:
@@ -386,7 +382,7 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
                 aliq_exc = 0.05
             else: 
                 aliq_exc = 0.06
-            return teto_inss + ((contribuicao - max_f1) / aliq_exc)
+            return contribuicao / aliq_exc
 
     if tipo == "faixas_quadruplas_fiea":
         up = plano["ur"]
@@ -736,8 +732,16 @@ if menu_selecionado == "Simulador Individual":
                 elif plano_dados.get("tipo") == "unerjprev_idade":
                     st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2 = st.columns(2)
-                    col_f1.metric("Faixa Base (Até 1 Teto INSS)", f"R$ {formatar_br(f1)}")
-                    col_f2.metric("Faixa Excedente", f"R$ {formatar_br(f2)}")
+                    teto_inss = plano_dados["ur"]
+                    if salario_input <= teto_inss:
+                        aliq_show = plano_dados["aliq_1"] * 100
+                    else:
+                        if idade_ou_tempo_input <= 44: aliq_show = 3.0
+                        elif 45 <= idade_ou_tempo_input <= 49: aliq_show = 4.0
+                        elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
+                        else: aliq_show = 6.0
+                    col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
+                    col_f2.metric("Valor Contribuição", f"R$ {formatar_br(total)}")
                 elif plano_dados.get("tipo") == "up_sem_teto":
                     st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                 elif plano_dados.get("tipo") == "lunelliprev":
@@ -987,8 +991,16 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
                     else: # UNERJPREV
                         col_f1, col_f2 = st.columns(2)
-                        col_f1.metric("Faixa Base (Até 1 Teto INSS)", f"R$ {formatar_br(f1)}")
-                        col_f2.metric("Faixa Excedente", f"R$ {formatar_br(f2)}")
+                        teto_inss = plano_dados["ur"]
+                        if salario_input <= teto_inss:
+                            aliq_show = plano_dados["aliq_1"] * 100
+                        else:
+                            if idade_ou_tempo_input <= 44: aliq_show = 3.0
+                            elif 45 <= idade_ou_tempo_input <= 49: aliq_show = 4.0
+                            elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
+                            else: aliq_show = 6.0
+                        col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
+                        col_f2.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(contrib_pura)}")
                     
                     st.markdown("### Composição do Boleto")
                     col_b1, col_b2, col_b3 = st.columns(3)
@@ -1129,14 +1141,24 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                             col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
                         else: # UNERJPREV
                             col_f1, col_f2 = st.columns(2)
-                            col_f1.metric("Faixa Base (Até 1 Teto INSS)", f"R$ {formatar_br(f1)}")
-                            col_f2.metric("Faixa Excedente", f"R$ {formatar_br(f2)}")
+                            teto_inss = plano_dados["ur"]
+                            if salario_encontrado <= teto_inss:
+                                aliq_show = plano_dados["aliq_1"] * 100
+                            else:
+                                if idade_ou_tempo_input <= 44: aliq_show = 3.0
+                                elif 45 <= idade_ou_tempo_input <= 49: aliq_show = 4.0
+                                elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
+                                else: aliq_show = 6.0
+                            col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
+                            col_f2.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(contrib_pura)}")
                         
                         st.markdown("### Composição do Boleto")
                         col_b1, col_b2, col_b3 = st.columns(3)
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                         col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxas (Adm/Risco)", "Isento no Boleto*")
+                        if plano_selecionado == "UNERJPREV":
+                            st.caption("*A taxa administrativa é cobrada diretamente do saldo/patrimônio (0,85% a.a.).")
 
                     elif plano_selecionado == "LUNELLIPREV":
                         contrib_patr = arredondar(contrib_pura * 0.10)
@@ -1317,7 +1339,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
         "Faixa FIEPA (1 a 6) (Opcional)": [1, 1, 4, 1],
         "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
         "Categoria (Opcional)": ["-", "-", "-", "-"],
-        "Univali Tipo (Opcional)": ["-", "-", "-", "-"]
+        "Univali Tipo (Opcional)": ["-", "-", "-", "Normal"]
     })
     
     buffer_modelo_rev = io.BytesIO()
@@ -1415,7 +1437,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Faixas de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
         {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "5.998,34", "Regra de Cálculo": "Faixas Cascata (SRC): 3% (Até 0,5 UP) | 5% (0,5 a 1) | 12% (1 a 3) | 15% (Acima)"},
-        {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Cascata de Faixas: Faixa Base (0,25% até 1 Teto INSS). Faixa Excedente (3% a 6% variando conforme Idade) aplicável apenas ao valor que superar o Teto."},
+        {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo conforme a idade"},
         {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
     ]
     
