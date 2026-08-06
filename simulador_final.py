@@ -159,25 +159,21 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"] 
-        f1 = arredondar(min(salario, teto_inss) * plano["aliq_1"])
-        
-        if salario > teto_inss:
-            excedente = salario - teto_inss
-            if idade_ou_tempo <= 44:
-                aliq_exc = 0.03
-            elif 45 <= idade_ou_tempo <= 49:
-                aliq_exc = 0.04
-            elif 50 <= idade_ou_tempo <= 54:
-                aliq_exc = 0.05
-            else: 
-                aliq_exc = 0.06
-            f2 = arredondar(excedente * aliq_exc)
+        if salario <= teto_inss:
+            aliq = plano["aliq_1"]
         else:
-            f2 = 0.0
-            
-        total_bruto = arredondar(f1 + f2)
+            if idade_ou_tempo <= 44:
+                aliq = 0.03
+            elif 45 <= idade_ou_tempo <= 49:
+                aliq = 0.04
+            elif 50 <= idade_ou_tempo <= 54:
+                aliq = 0.05
+            else: 
+                aliq = 0.06
+                
+        total_bruto = arredondar(salario * aliq)
         superavit = arredondar(total_bruto * taxa_superavit)
-        return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
+        return arredondar(total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
 
     if tipo == "faixas_quadruplas_fiea":
         up = plano["ur"]
@@ -372,9 +368,9 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
         
     if tipo == "unerjprev_idade":
         teto_inss = plano["ur"]
-        max_f1 = arredondar(teto_inss * plano["aliq_1"])
+        max_025 = arredondar(teto_inss * plano["aliq_1"])
         
-        if contribuicao <= max_f1:
+        if contribuicao <= max_025:
             return contribuicao / plano["aliq_1"]
         else:
             if idade_ou_tempo <= 44:
@@ -385,7 +381,7 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
                 aliq_exc = 0.05
             else: 
                 aliq_exc = 0.06
-            return teto_inss + ((contribuicao - max_f1) / aliq_exc)
+            return contribuicao / aliq_exc
 
     if tipo == "faixas_quadruplas_fiea":
         up = plano["ur"]
@@ -520,53 +516,6 @@ def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=No
         
     funcao_teste = lambda s: calcular_contribuicao(plano_nome, s, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao)[0]
     return refinar_centro_arredondamento(salario_base, contribuicao_liquida, funcao_teste)
-
-
-# --- NOVOS MOTORES PARA SOMAR PATROCINADORA EM ATIVOS ---
-def simular_cobranca_ativo(plano_nome, salario, aliq_escolhida=None, categoria="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
-    total = calcular_contribuicao(plano_nome, salario, aliq_escolhida, categoria, univali_tipo, idade_ou_tempo, faixa_opcao)[0]
-    
-    plano_dados = planos.get(plano_nome, {})
-    tx_adm_plano = plano_dados.get("tx_adm", 0.0)
-    tx_risco_plano = plano_dados.get("tx_risco", 0.0)
-    
-    tem_risco_escolhido = "(Com Risco)" in categoria
-    valor_risco = arredondar(salario * tx_risco_plano) if tem_risco_escolhido else 0.0
-    
-    if plano_dados.get("base_adm_com_risco", False):
-        taxa_adm_patr = arredondar((total + valor_risco) * tx_adm_plano)
-        taxa_adm_total = arredondar(taxa_adm_patr * 2)
-    else:
-        taxa_adm_patr = arredondar(total * tx_adm_plano)
-        taxa_adm_total = arredondar(taxa_adm_patr * 2)
-        
-    c_patr_bruta = total
-    
-    if plano_nome == "LUNELLIPREV":
-        c_patr_exibir = arredondar(total * 0.10)
-    elif plano_nome == "UNERJPREV":
-        c_patr_exibir = total
-    else:
-        if "Não Migrante" in categoria:
-            c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
-        else:
-            c_patr_exibir = c_patr_bruta
-            
-    return arredondar(total + c_patr_exibir)
-
-def descobrir_salario_ativo(plano_nome, cobranca_alvo, aliq_escolhida=None, categoria="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
-    low, high = 0.0, 1000000.0
-    for _ in range(80): 
-        mid = (low + high) / 2
-        calc = simular_cobranca_ativo(plano_nome, mid, aliq_escolhida, categoria, univali_tipo, idade_ou_tempo, faixa_opcao)
-        if calc < cobranca_alvo:
-            low = mid
-        else:
-            high = mid
-            
-    salario_base = mid
-    funcao_teste = lambda s: simular_cobranca_ativo(plano_nome, s, aliq_escolhida, categoria, univali_tipo, idade_ou_tempo, faixa_opcao)
-    return refinar_centro_arredondamento(salario_base, cobranca_alvo, funcao_teste)
 
 
 # --- MOTORES DE CÁLCULO AUTOPATROCÍNIO ---
@@ -776,13 +725,11 @@ if menu_selecionado == "Simulador Individual":
             if salario_input > 0:
                 total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
-                total_sugerido = simular_cobranca_ativo(plano_selecionado, salario_input, aliq_escolhida, categoria_participante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
-                
                 if total == 0:
                     st.info("Este plano utiliza uma regra de Mínimo Fixo. Consulte o regulamento.")
                 
                 elif plano_dados.get("tipo") == "unerjprev_idade":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2 = st.columns(2)
                     teto_inss = plano_dados["ur"]
                     if salario_input <= teto_inss:
@@ -793,40 +740,40 @@ if menu_selecionado == "Simulador Individual":
                         elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
                         else: aliq_show = 6.0
                     col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
-                    col_f2.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(total)}")
+                    col_f2.metric("Valor Contribuição", f"R$ {formatar_br(total)}")
                 elif plano_dados.get("tipo") == "up_sem_teto":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                 elif plano_dados.get("tipo") == "lunelliprev":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2 = st.columns(2)
                     col_f1.metric("Alíquota Aplicada", f"{formatar_br(max(aliq_escolhida if aliq_escolhida else 0.01, 0.01) * 100)}%")
                     col_f2.metric("Valor Base", f"R$ {formatar_br(total)}")
                 elif plano_selecionado == "UNIVALIPrevidencia":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
                     col_f1.metric(f"Faixa Base (Até R$ {formatar_br(plano_dados['ur'] * 8)})", f"R$ {formatar_br(f1)}")
                     col_f2.metric("Faixa Excedente", f"R$ {formatar_br(f2)}")
-                    col_f3.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(total)}")
+                    col_f3.metric("Contribuição Pura", f"R$ {formatar_br(total)}")
                 elif plano_selecionado == "PREVIFIEA":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
                     col_f1.metric("Faixa Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
                     col_f2.metric("Faixas Intermédias", f"R$ {formatar_br(f2)}")
                     col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "PREVFIEPA":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
                     col_f1.metric("Faixa Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
                     col_f2.metric("Faixas Intermédias (0,5 a 3 UPs)", f"R$ {formatar_br(f2)}")
                     col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "PREVISC SENAI-MA":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     col_f1, col_f2, col_f3 = st.columns(3)
                     col_f1.metric("Faixa Base (Até R$ 2.907,14)", f"R$ {formatar_br(f1)}")
                     col_f2.metric("Faixa Intermediária (Até R$ 5.000,00)", f"R$ {formatar_br(f2)}")
                     col_f3.metric("Faixa Topo (Excedente)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "SESC SC (SESCPREV)":
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     st.info("Cálculo realizado via fator de Parcela a Deduzir.")
                     if f3 > 0:
                         col_f1, col_f2, col_f3 = st.columns(3)
@@ -838,7 +785,7 @@ if menu_selecionado == "Simulador Individual":
                         col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
                         col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
                 else:
-                    st.success(f"**Contribuição Sugerida Total (Part. + Patroc.):** R$ {formatar_br(total_sugerido)}")
+                    st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                     if superavit > 0:
                         st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {formatar_br(superavit)}**")
                     if f3 > 0:
@@ -910,7 +857,7 @@ if menu_selecionado == "Simulador Individual":
     with aba_reversa:
         st.subheader("Cálculo de Salário a partir da Contribuição")
         
-        contrib_input_str = st.text_input("Digite a Contribuição Total Alvo (Part. + Patroc.) (R$):", value="0,00", key="contrib_reversa")
+        contrib_input_str = st.text_input("Digite a Contribuição Alvo (R$):", value="0,00", key="contrib_reversa")
         contrib_input = converter_br(contrib_input_str)
         
         aliq_escolhida_rev = None
@@ -921,7 +868,7 @@ if menu_selecionado == "Simulador Individual":
             
         if st.button("Descobrir Salário", type="primary"):
             if contrib_input > 0:
-                salario_descob = descobrir_salario_ativo(plano_selecionado, contrib_input, aliq_escolhida_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
+                salario_descob = calcular_salario_reverso(plano_selecionado, contrib_input, aliq_escolhida_rev, categoria_participante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 if salario_descob == 0:
                     st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas.")
                 else:
@@ -1358,7 +1305,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
                     
                     faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
                     
-                    total_pagar = simular_cobranca_ativo(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)
+                    total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)[0]
                     resultados.append(total_pagar)
                 else:
                     resultados.append("Plano Não Encontrado")
@@ -1387,7 +1334,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
 # =================================================================
 elif menu_selecionado == "Cálculo de Salário em Lote":
     st.title("📂 Cálculo de Salário em Lote")
-    st.write("Baixe a planilha modelo, preencha a Cobrança Alvo Total (Participante + Patrocinadora) de cada participante e faça o upload para descobrir os salários correspondentes.")
+    st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
     df_modelo_rev = pd.DataFrame({
         "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "PREVFIEPA", "UNERJPREV"],
@@ -1445,7 +1392,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                     
                     faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
                     
-                    salario_descob = descobrir_salario_ativo(plano_oficial, contribuicao_alvo, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)
+                    salario_descob = calcular_salario_reverso(plano_oficial, contribuicao_alvo, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)
                     
                     if salario_descob == 0:
                         resultados_rev.append("Cálculo Incompatível")
