@@ -172,6 +172,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
             else: 
                 aliq = 0.06
                 
+        # AQUI FOI CORRIGIDO: Base Inteira Única
         total_bruto = arredondar(salario * aliq)
         superavit = arredondar(total_bruto * taxa_superavit)
         return arredondar(total_bruto - superavit), total_bruto, 0.0, 0.0, superavit
@@ -382,6 +383,7 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
                 aliq_exc = 0.05
             else: 
                 aliq_exc = 0.06
+            # AQUI FOI CORRIGIDO: Base Inteira Única
             return contribuicao / aliq_exc
 
     if tipo == "faixas_quadruplas_fiea":
@@ -741,7 +743,7 @@ if menu_selecionado == "Simulador Individual":
                         elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
                         else: aliq_show = 6.0
                     col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
-                    col_f2.metric("Valor Contribuição", f"R$ {formatar_br(total)}")
+                    col_f2.metric("Contribuição Pura", f"R$ {formatar_br(total)}")
                 elif plano_dados.get("tipo") == "up_sem_teto":
                     st.success(f"**Contribuição Sugerida (Participante):** R$ {formatar_br(total)}")
                 elif plano_dados.get("tipo") == "lunelliprev":
@@ -810,6 +812,8 @@ if menu_selecionado == "Simulador Individual":
                 
                 if plano_selecionado == "LUNELLIPREV":
                     c_patr_exibir = arredondar(total * 0.10)
+                elif plano_selecionado == "UNERJPREV":
+                    c_patr_exibir = total
                 else:
                     if "Não Migrante" in categoria_participante:
                         c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
@@ -1157,8 +1161,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                         col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxas (Adm/Risco)", "Isento no Boleto*")
-                        if plano_selecionado == "UNERJPREV":
-                            st.caption("*A taxa administrativa é cobrada diretamente do saldo/patrimônio (0,85% a.a.).")
 
                     elif plano_selecionado == "LUNELLIPREV":
                         contrib_patr = arredondar(contrib_pura * 0.10)
@@ -1437,7 +1439,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Faixas de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
         {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "5.998,34", "Regra de Cálculo": "Faixas Cascata (SRC): 3% (Até 0,5 UP) | 5% (0,5 a 1) | 12% (1 a 3) | 15% (Acima)"},
-        {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo conforme a idade"},
+        {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo sobre a Base Total conforme a idade."},
         {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
     ]
     
