@@ -35,31 +35,6 @@ st.markdown("""
         padding: 15px;
         border-radius: 8px;
     }
-
-    /* Ajuste ANTIALIASING para remover o desfoque do Selectbox */
-    div[data-baseweb="select"] *, div[data-baseweb="popover"] * {
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-        text-shadow: none !important;
-    }
-
-    div[data-baseweb="select"] > div, 
-    div[data-baseweb="select"] span {
-        color: #1B365D !important;
-        font-weight: 600 !important;
-        opacity: 1 !important;
-    }
-    
-    /* FORÇAR ESTILO DA LISTA FLUTUANTE NITIDO */
-    div[data-baseweb="popover"] li, 
-    div[data-baseweb="popover"] li span,
-    div[role="listbox"] li span {
-        color: #1B365D !important;
-        font-weight: 600 !important;
-        font-size: 15px !important;
-        opacity: 1 !important;
-        letter-spacing: 0.2px !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -1407,7 +1382,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                     univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote_rev.columns else "Normal"
                     
                     faixa_val = "1"
-                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
+                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
                         faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
                     elif "Faixa FIEPA (1 a 6) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEPA (1 a 6) (Opcional)")) and plano_oficial == "PREVFIEPA":
                         faixa_val = str(row.get("Faixa FIEPA (1 a 6) (Opcional)")).split('.')[0].strip()
