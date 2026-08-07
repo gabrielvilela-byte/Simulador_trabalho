@@ -36,16 +36,22 @@ st.markdown("""
         border-radius: 8px;
     }
 
-    /* Ajuste para remover o efeito desfocado e forçar o Negrito no Menu de Seleção */
-    div[data-baseweb="select"] * {
-        font-weight: bold !important;
+    /* FORÇAR ESTILO DA CAIXA DE SELEÇÃO PRINCIPAL */
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="select"] span {
         color: #1B365D !important;
+        font-weight: bold !important;
+        opacity: 1 !important;
     }
-    ul[role="listbox"] li span, 
-    ul[data-baseweb="menu"] li span {
-        font-weight: bold !important;
+    
+    /* FORÇAR ESTILO DA LISTA FLUTUANTE (Camada Popover do Streamlit) */
+    div[data-baseweb="popover"] li, 
+    div[data-baseweb="popover"] li span,
+    div[role="listbox"] li span {
         color: #1B365D !important;
+        font-weight: bold !important;
         font-size: 15px !important;
+        opacity: 1 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -165,7 +171,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
 
     if tipo == "lunelliprev":
         aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
-        aliq_aplicar = max(aliq_aplicar, 0.01)
+        aliq_aplicar = max(aliq_aplicar, 0.01) # Mínimo obrigatório de 1%
         total_bruto = arredondar(salario * aliq_aplicar)
         return total_bruto, total_bruto, 0.0, 0.0, 0.0
         
