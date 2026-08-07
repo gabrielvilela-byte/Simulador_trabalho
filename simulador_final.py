@@ -36,22 +36,29 @@ st.markdown("""
         border-radius: 8px;
     }
 
-    /* FORÇAR ESTILO DA CAIXA DE SELEÇÃO PRINCIPAL */
+    /* Ajuste ANTIALIASING para remover o desfoque do Selectbox */
+    div[data-baseweb="select"] *, div[data-baseweb="popover"] * {
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-shadow: none !important;
+    }
+
     div[data-baseweb="select"] > div, 
     div[data-baseweb="select"] span {
         color: #1B365D !important;
-        font-weight: bold !important;
+        font-weight: 600 !important;
         opacity: 1 !important;
     }
     
-    /* FORÇAR ESTILO DA LISTA FLUTUANTE (Camada Popover do Streamlit) */
+    /* FORÇAR ESTILO DA LISTA FLUTUANTE NITIDO */
     div[data-baseweb="popover"] li, 
     div[data-baseweb="popover"] li span,
     div[role="listbox"] li span {
         color: #1B365D !important;
-        font-weight: bold !important;
+        font-weight: 600 !important;
         font-size: 15px !important;
         opacity: 1 !important;
+        letter-spacing: 0.2px !important;
     }
     </style>
 """, unsafe_allow_html=True)
