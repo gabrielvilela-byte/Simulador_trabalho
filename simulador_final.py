@@ -51,7 +51,7 @@ planos = {
     "PREVFIEPA": {"up": 7740.09, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiepa"},
     "FECOMERCIO": {"ur": 845.22, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
     "FIEMTPREV": {"ur": 715.77, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
-    "UNIVALIPrevidencia": {"ur": 623.33, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_univali"},
+    "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_univali"},
     "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.0172, "aliq_2": 0.1377, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "SESC SC (SESCPREV)": {"ur": 922.63, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tx_adm": 0.0218, "tx_risco": 0.0012, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"aliq_1": 0.01, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "lunelliprev"},
@@ -153,7 +153,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
 
     if tipo == "lunelliprev":
         aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
-        aliq_aplicar = max(aliq_aplicar, 0.01) # Mínimo obrigatório de 1%
+        aliq_aplicar = max(aliq_aplicar, 0.01)
         total_bruto = arredondar(salario * aliq_aplicar)
         return total_bruto, total_bruto, 0.0, 0.0, 0.0
         
@@ -1382,7 +1382,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                     univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote_rev.columns else "Normal"
                     
                     faixa_val = "1"
-                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
+                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
                         faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
                     elif "Faixa FIEPA (1 a 6) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEPA (1 a 6) (Opcional)")) and plano_oficial == "PREVFIEPA":
                         faixa_val = str(row.get("Faixa FIEPA (1 a 6) (Opcional)")).split('.')[0].strip()
@@ -1430,10 +1430,10 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit (7,28%)"},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.907,14 e R$ 5.000,00)"},
-        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
+        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da option escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%"},
-        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "623,33", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18%"},
+        {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18%"},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Faixas: 1,72% (Até 1 SP) | 13,77% (Acima) - Taxa Adm: 2,18%"},
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Faixas de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
