@@ -46,7 +46,7 @@ planos = {
     "FIESCPREV": {"ur": 716.84, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tx_adm": 0.0218, "tx_risco": 0.0034, "tipo": "faixas", "base_adm_com_risco": True},
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "SENACPREV": {"ur": 734.75, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tx_adm": 0.0218, "tx_risco": 0.0012, "tx_risco_auto": 0.0024, "tipo": "faixas"},
-    "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_triplas_senai"},
+    "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_triplas_senai"},
     "PREVISC SENAI-MA": {"teto1_rs": 2907.14, "teto2_rs": 5000.00, "tx_adm": 0.0235, "tx_risco": 0.0, "tipo": "faixas_triplas_fiema"},
     "PREVFIEPA": {"up": 7740.09, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiepa"},
     "FECOMERCIO": {"ur": 845.22, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
@@ -135,13 +135,16 @@ def refinar_centro_arredondamento(salario_base, valor_alvo, funcao_teste):
     return (s_min + s_max) / 200.0
 
 
-def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
+def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1", is_autopatrocinio=False):
     plano = planos.get(plano_nome)
     if not plano:
         return 0.0, 0.0, 0.0, 0.0, 0.0
         
     tipo = plano.get("tipo", "faixas")
     taxa_superavit = plano.get("superavit", 0.0)
+    
+    if is_autopatrocinio:
+        taxa_superavit = 0.0
     
     if tipo == "fixo":
         return 0.0, 0.0, 0.0, 0.0, 0.0
@@ -154,7 +157,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
 
     if tipo == "lunelliprev":
         aliq_aplicar = aliq_escolhida if aliq_escolhida is not None else plano["aliq_1"]
-        aliq_aplicar = max(aliq_aplicar, 0.01)
+        aliq_aplicar = max(aliq_aplicar, 0.01) # Mínimo obrigatório de 1%
         total_bruto = arredondar(salario * aliq_aplicar)
         return total_bruto, total_bruto, 0.0, 0.0, 0.0
         
@@ -319,7 +322,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
     return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
 
 
-def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
+def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1", is_autopatrocinio=False):
     plano = planos.get(plano_nome)
     if not plano:
         return 0.0
@@ -327,6 +330,9 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
     tipo = plano.get("tipo", "faixas")
     taxa_superavit = plano.get("superavit", 0.0)
     
+    if is_autopatrocinio:
+        taxa_superavit = 0.0
+        
     contribuicao = contribuicao_liquida / (1 - taxa_superavit)
     
     if tipo in ["fixo"]:
@@ -465,18 +471,18 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
         return teto_rs + ((contribuicao - max_f1) / plano["aliq_2"])
 
 
-def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
-    salario_base = _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao)
+def calcular_salario_reverso(plano_nome, contribuicao_liquida, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1", is_autopatrocinio=False):
+    salario_base = _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao, is_autopatrocinio)
     if salario_base == 0.0:
         return 0.0
         
-    funcao_teste = lambda s: calcular_contribuicao(plano_nome, s, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao)[0]
+    funcao_teste = lambda s: calcular_contribuicao(plano_nome, s, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao, is_autopatrocinio)[0]
     return refinar_centro_arredondamento(salario_base, contribuicao_liquida, funcao_teste)
 
 
 # --- MOTORES DE CÁLCULO AUTOPATROCÍNIO ---
 def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, univali_migrante="Migrante", univali_tipo="Normal", idade_ou_tempo=30, faixa_opcao="Faixa 1"):
-    contrib_pura = calcular_contribuicao(plano_nome, salario, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao)[0]
+    contrib_pura = calcular_contribuicao(plano_nome, salario, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opcao, is_autopatrocinio=True)[0]
     
     plano = planos.get(plano_nome, {})
     tx_adm = plano.get("tx_adm", 0.0)
@@ -735,7 +741,7 @@ if menu_selecionado == "Simulador Individual":
                 else:
                     st.success(f"### Contribuição Sugerida (Participante): R$ {formatar_br(total)}")
                     if superavit > 0:
-                        st.info(f"Desconto de Superávit Participante (7,28%): **- R$ {formatar_br(superavit)}**")
+                        st.info(f"Desconto de Superávit Participante ({formatar_br(plano_dados.get('superavit', 0)*100)}%): **- R$ {formatar_br(superavit)}**")
                     if f3 > 0:
                         col_f1, col_f2, col_f3 = st.columns(3)
                         col_f1.metric("Faixa 1", f"R$ {formatar_br(f1)}")
@@ -881,7 +887,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         | **5** | 1,80% | 3,00% | 7,20% | 9,00% |
         | **6** | 1,50% | 2,50% | 6,00% | 7,50% |
         """)
-        faixa_opcao_selecionada = radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key=f"faixa_{plano_selecionado}_auto")
+        faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key=f"faixa_{plano_selecionado}_auto")
 
     st.divider()
 
@@ -915,7 +921,8 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
                 
-                contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida_auto, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
+                # Passa is_autopatrocinio=True para ignorar o superávit na cobrança pura
+                contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida_auto, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada, is_autopatrocinio=True)
                 
                 if plano_selecionado in ["FIEMTPREV", "SENAI-PIPREV"]:
                     taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
@@ -1067,7 +1074,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 salario_encontrado = descobrir_salario_autopatrocinio(plano_selecionado, cobranca_input, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
                 if salario_encontrado > 0:
-                    contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_encontrado, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
+                    contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_encontrado, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada, is_autopatrocinio=True)
                     
                     if plano_selecionado in ["FIEMTPREV", "SENAI-PIPREV"]:
                         taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
@@ -1382,7 +1389,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima) - [Taxa Adm inclui Risco]"},
         {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Faixas: 3% (Até 8,5 UR) | 7,5% (Acima)"},
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
-        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Taxa Adm: 2,18% (A Patrocinadora absorve o desconto no Autopatrocínio)"},
+        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit nos Ativos (7,28%) - Taxa Adm: 2,18% (A Patrocinadora absorve o desconto no Autopatrocínio)"},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.907,14 e R$ 5.000,00)"},
         {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
