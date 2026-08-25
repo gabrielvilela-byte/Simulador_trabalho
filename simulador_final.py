@@ -151,7 +151,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         if salario > ur:
             contrib_pura = arredondar((salario * 0.137741) - (ur * 0.122124))
         else:
-            contrib_pura = arredondar(salario * 0.015617)
+            contrib_pura = arredondar(salario * 0.017218)
             
         tx_adm = plano.get("tx_adm", 0.0)
         valor_adm = arredondar(contrib_pura * tx_adm)
@@ -359,9 +359,9 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
         else:
             contrib_pura = contribuicao_liquida / (1 - tx_adm)
             
-        limite_f1 = ur * 0.015617
+        limite_f1 = ur * 0.017218
         if contrib_pura <= limite_f1:
-            return contrib_pura / 0.015617
+            return contrib_pura / 0.017218
         else:
             return (contrib_pura + (ur * 0.122124)) / 0.137741
             
@@ -1168,7 +1168,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         st.markdown("### Composição do Boleto")
                         col_b1, col_b2, col_b3 = st.columns(3)
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
-                        col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
+                        col_b2.metric("Contrib. Patrocinadora (10%)", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxas (Adm)", "Isento no Boleto*")
                         st.caption("*As taxas administrativas (0,50%) são debitadas diretamente do saldo do fundo (recursos garantidores) anualmente.")
                         
