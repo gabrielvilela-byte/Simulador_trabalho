@@ -52,7 +52,7 @@ planos = {
     "FECOMERCIO": {"ur": 845.22, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
     "FIEMTPREV": {"ur": 715.77, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_univali"},
-    "SESI-PIPREV": {"ur": 6812.53, "teto_urs": 1.0, "aliq_1": 0.017218, "aliq_2": 0.137741, "tx_adm": 0.0218, "tx_risco": 0.0, "superavit": 0.0, "tipo": "faixas"},
+    "SESI-PIPREV": {"ur": 6812.53, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "sesi_piprev_deducao"},
     "SESC SC (SESCPREV)": {"ur": 922.63, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tx_adm": 0.0218, "tx_risco": 0.0012, "tipo": "sesc_triplo"},
     "LUNELLIPREV": {"aliq_1": 0.01, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "lunelliprev"},
     "PREVIFIEA": {"up": 8258.59, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiepa"},
@@ -145,6 +145,23 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
     
     if is_autopatrocinio:
         taxa_superavit = 0.0
+        
+    if tipo == "sesi_piprev_deducao":
+        ur = plano["ur"]
+        if salario > ur:
+            contrib_pura = arredondar((salario * 0.137741) - (ur * 0.122124))
+        else:
+            contrib_pura = arredondar(salario * 0.015617)
+            
+        tx_adm = plano.get("tx_adm", 0.0)
+        valor_adm = arredondar(contrib_pura * tx_adm)
+        contrib_liquida = arredondar(contrib_pura - valor_adm)
+        
+        if is_autopatrocinio:
+            return contrib_pura, contrib_pura, valor_adm, 0.0, 0.0
+            
+        # Retorna o Líquido no índice 0 (Total), Pura no 1 (f1) e Valor_Adm no 2 (f2)
+        return contrib_liquida, contrib_pura, valor_adm, 0.0, 0.0
     
     if tipo == "fixo":
         return 0.0, 0.0, 0.0, 0.0, 0.0
@@ -333,6 +350,21 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
     if is_autopatrocinio:
         taxa_superavit = 0.0
         
+    if tipo == "sesi_piprev_deducao":
+        ur = plano["ur"]
+        tx_adm = plano.get("tx_adm", 0.0)
+        
+        if is_autopatrocinio:
+            contrib_pura = contribuicao_liquida
+        else:
+            contrib_pura = contribuicao_liquida / (1 - tx_adm)
+            
+        limite_f1 = ur * 0.015617
+        if contrib_pura <= limite_f1:
+            return contrib_pura / 0.015617
+        else:
+            return (contrib_pura + (ur * 0.122124)) / 0.137741
+            
     contribuicao = contribuicao_liquida / (1 - taxa_superavit)
     
     if tipo in ["fixo"]:
@@ -738,6 +770,12 @@ if menu_selecionado == "Simulador Individual":
                         col_f1, col_f2 = st.columns(2)
                         col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
                         col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
+                elif plano_dados.get("tipo") == "sesi_piprev_deducao":
+                    st.success(f"### Contribuição Sugerida (Líquida): R$ {formatar_br(total)}")
+                    st.info("Cálculo realizado via Fórmula Direta de Dedução do SESI.")
+                    col_f1, col_f2 = st.columns(2)
+                    col_f1.metric("Contribuição Pura", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Desconto Taxa Adm (2,18%)", f"- R$ {formatar_br(f2)}")
                 else:
                     st.success(f"### Contribuição Sugerida (Participante): R$ {formatar_br(total)}")
                     if superavit > 0:
@@ -758,7 +796,10 @@ if menu_selecionado == "Simulador Individual":
                 tem_risco_escolhido = "(Com Risco)" in categoria_participante
                 valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco_escolhido else 0.0
                 
-                c_patr_bruta = arredondar(total + superavit)
+                if plano_dados.get("tipo") == "sesi_piprev_deducao":
+                    c_patr_bruta = f1
+                else:
+                    c_patr_bruta = arredondar(total + superavit)
                 
                 if plano_dados.get("base_adm_com_risco", False):
                     taxa_adm_patr = arredondar((c_patr_bruta + valor_risco) * tx_adm_plano)
@@ -770,6 +811,8 @@ if menu_selecionado == "Simulador Individual":
                 if plano_selecionado == "LUNELLIPREV":
                     c_patr_exibir = arredondar(c_patr_bruta * 0.10)
                 elif plano_selecionado == "UNERJPREV":
+                    c_patr_exibir = c_patr_bruta
+                elif plano_dados.get("tipo") == "sesi_piprev_deducao":
                     c_patr_exibir = c_patr_bruta
                 else:
                     if "Não Migrante" in categoria_participante:
@@ -921,7 +964,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
                 
-                # Passa is_autopatrocinio=True para ignorar o superávit na cobrança pura
                 contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida_auto, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada, is_autopatrocinio=True)
                 
                 if plano_selecionado in ["FIEMTPREV", "SENAI-PIPREV", "SESI-PIPREV"]:
@@ -1126,7 +1168,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         st.markdown("### Composição do Boleto")
                         col_b1, col_b2, col_b3 = st.columns(3)
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
-                        col_b2.metric("Contrib. Patrocinadora (10%)", f"R$ {formatar_br(contrib_patr)}")
+                        col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxas (Adm)", "Isento no Boleto*")
                         st.caption("*As taxas administrativas (0,50%) são debitadas diretamente do saldo do fundo (recursos garantidores) anualmente.")
                         
@@ -1395,7 +1437,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%"},
         {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18%"},
-        {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Faixas: 1,7218% (Até 1 SP) | 13,7741% (Acima) - Taxa Adm: 2,18%"},
+        {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fórmula Direta c/ Parcela a Deduzir: (Salário * 13,7741%) - (SP * 12,2124%) e deduz a Taxa Adm (2,18%) na exibição"},
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Faixas de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
         {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "8.258,59", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
