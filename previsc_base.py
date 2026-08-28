@@ -108,7 +108,7 @@ div[data-baseweb="select"] svg {{ color: #1b1b2b !important; }}
 }}
 .stTabs [aria-selected="true"] {{ background: rgba(255,255,255,.32) !important; }}
 
-/* Removido o tempo de transição (transition) para deixar os botões mais rápidos ao clique */
+/* Mantendo os botões mais rápidos ao clique */
 .stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {{
   background: linear-gradient(100deg, {VERDE} 0%, {AZUL} 45%, {ROXO} 100%) !important;
   color: #fff !important; border: none; border-radius: 12px;
@@ -141,19 +141,20 @@ div[data-baseweb="select"] svg {{ color: #1b1b2b !important; }}
 [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{ color: #fff !important; }}
 .stAlert {{ border-radius: 12px; }}
 
-/* ---------- SIDEBAR: cartão ESCURO flutuante com letras brancas ---------- */
+/* ---------- SIDEBAR: cartão AZUL FORTE PREVISC com letras brancas ---------- */
 section[data-testid="stSidebar"] {{
   background: transparent; padding: 1.1rem .8rem 1.1rem 1.1rem;
 }}
 section[data-testid="stSidebar"] > div:first-child {{
-  background: #1B365D; border-radius: 22px;
+  background: #005BAA; /* Azul "Previsc" Forte vibrante, não é preto */
+  border-radius: 22px;
   box-shadow: 0 26px 60px rgba(10,10,40,.35); overflow: hidden;
 }}
 /* Botões da barra lateral */
 section[data-testid="stSidebar"] .stButton > button {{
   width: 100%; margin-bottom: 0.5rem; padding: 0.8rem 0.5rem; font-size: 0.9rem;
 }}
-/* Texto do rodapé da barra lateral agora em branco */
+/* Texto do rodapé da barra lateral em branco */
 section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
   color: #ffffff !important; font-size: .78rem; line-height: 1.45;
 }}
@@ -165,7 +166,7 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{ gap: .2rem; 
   background: linear-gradient(90deg, {CIANO} 0%, #ffffff 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1;
 }}
-/* Subtítulo logo branco para contrastar no fundo escuro */
+/* Subtítulo logo branco para contrastar no fundo azul forte */
 .pv-logo .pv-logo-sub {{
   font-style: italic; font-weight: 800; font-size: .58rem; letter-spacing: .6px;
   color: #ffffff; margin-top: .1rem;
