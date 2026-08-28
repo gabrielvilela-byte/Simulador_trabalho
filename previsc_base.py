@@ -141,32 +141,30 @@ div[data-baseweb="select"] svg {{ color: #1b1b2b !important; }}
 [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{ color: #fff !important; }}
 .stAlert {{ border-radius: 12px; }}
 
-/* ---------- SIDEBAR: cartão branco flutuante ---------- */
+/* ---------- SIDEBAR: cartão escuro flutuante com fonte branca ---------- */
 section[data-testid="stSidebar"] {{
   background: transparent; padding: 1.1rem .8rem 1.1rem 1.1rem;
 }}
 section[data-testid="stSidebar"] > div:first-child {{
-  background: #f6f6f4; border-radius: 22px;
-  box-shadow: 0 26px 60px rgba(10,10,40,.35); overflow: hidden;
+  background: transparent; 
 }}
-/* A mágica que devolve o estilo para os botões da barra lateral */
 section[data-testid="stSidebar"] .stButton > button {{
   width: 100%; margin-bottom: 0.5rem; padding: 0.8rem 0.5rem; font-size: 0.9rem;
 }}
 section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
-  color: #6d6d7a !important; font-size: .78rem; line-height: 1.45;
+  color: #ffffff !important; font-size: .85rem; line-height: 1.45; /* FONTE BRANCA */
 }}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{ gap: .2rem; }}
 
 .pv-logo {{ text-align: center; padding: 1.4rem 0 1.1rem; }}
 .pv-logo .pv-logo-nome {{
   font-style: italic; font-weight: 900; font-size: 2.2rem; letter-spacing: -1px;
-  background: linear-gradient(90deg, {AZUL} 0%, {ROXO} 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1;
+  color: #ffffff !important; line-height: 1; text-shadow: none;
+  background: none; -webkit-text-fill-color: #ffffff;
 }}
 .pv-logo .pv-logo-sub {{
   font-style: italic; font-weight: 800; font-size: .58rem; letter-spacing: .6px;
-  color: {VERDE}; margin-top: .1rem;
+  color: {CIANO}; margin-top: .1rem; /* Subtitulo do logo em ciano */
 }}
 
 .pv-ondas-capa {{ position: absolute !important; width: 100% !important; height: 100% !important; z-index: 1; opacity: .95; }}
@@ -251,12 +249,8 @@ def capa(titulo: str = "PREVISC", frase: str = "Planeje hoje o futuro que quer v
 """,
         unsafe_allow_html=True,
     )
-    caixa = st.container(key="pv_cta_box")
-    with caixa:
-        col_a, col_b, col_c = st.columns([2, 1, 2])
-        with col_b:
-            clicou = st.button(rotulo_botao, key="pv_cta", use_container_width=True)
-    return clicou
+    # O botão de Calcule Agora é renderizado pela própria Home no app.py
+    return False
 
 def titulo_pagina(texto: str, descricao: str = "") -> None:
     st.markdown(
@@ -269,6 +263,6 @@ def titulo_pagina(texto: str, descricao: str = "") -> None:
 
 def rodape_sidebar(texto: str = "Sistema interno desenvolvido pela equipe de Arrecadação para processar cálculos previdenciários (individuais e em lote) de Participantes Ativos e Autopatrocinados, integrado à consulta rápida das regras vigentes.") -> None:
     st.markdown(
-        f"<div style='padding:1.6rem 1rem 1.4rem;'><p style='color:#6d6d7a;font-size:.78rem;line-height:1.45;margin:0;'>{texto}</p></div>",
+        f"<div style='padding:1.6rem 1rem 1.4rem;'><p style='color:#ffffff;font-size:.85rem;line-height:1.45;margin:0;'>{texto}</p></div>",
         unsafe_allow_html=True,
     )
