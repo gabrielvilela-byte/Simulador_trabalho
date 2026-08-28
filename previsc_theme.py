@@ -173,6 +173,11 @@ div[data-baseweb="select"] svg {{ color: #1b1b2b !important; }}
   box-shadow: 0 10px 24px rgba(0,0,0,.22);
   transition: transform .15s ease, filter .15s ease;
 }}
+.stButton > button [data-testid="stMarkdownContainer"] p,
+.stDownloadButton > button [data-testid="stMarkdownContainer"] p,
+.stFormSubmitButton > button [data-testid="stMarkdownContainer"] p {{
+  color: #ffffff !important; font-weight: 800 !important;
+}}
 .stButton > button:hover, .stDownloadButton > button:hover,
 .stFormSubmitButton > button:hover {{
   transform: translateY(-2px); filter: brightness(1.08); color: #fff !important;
@@ -289,6 +294,19 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{ gap: .2rem; 
 .st-key-pv_cta_box {{ margin-top: -7rem; display: flex; justify-content: center; position: relative; z-index: 3; }}
 .st-key-pv_cta_box .stButton > button {{ padding: .5rem 1.6rem; font-size: .95rem; border-radius: 10px; }}
 
+/* ---------- cartão central do MENU ---------- */
+.st-key-pv_menu_card {{
+  background: #f6f6f4;
+  border-radius: 26px;
+  padding: 2.4rem 2.2rem 1.6rem;
+  box-shadow: 0 30px 70px rgba(10,10,40,.35);
+  margin-top: 7vh; margin-bottom: 4vh;
+}}
+.st-key-pv_menu_card [data-testid="stMarkdownContainer"] p {{
+  color: #6d6d7a !important; font-size: .8rem; line-height: 1.5;
+}}
+.st-key-pv_menu_card .stButton > button {{ margin-bottom: .45rem; }}
+
 @media (max-width: 780px) {{
   .pv-capa {{ aspect-ratio: auto; min-height: 78vh; }}
   .block-container {{ padding-left: 1rem; padding-right: 1rem; }}
@@ -317,6 +335,24 @@ def logo_sidebar() -> None:
         '<div class="pv-logo-nome">PREVISC</div>'
         '<div class="pv-logo-sub">PREVIDÊNCIA COMPLEMENTAR</div>'
         "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def fundo_menu() -> None:
+    """Fundo da tela de menu: foto da direita sobre o gradiente."""
+    fundo = _bg_layer(
+        "hero-menu.jpg",
+        (
+            "linear-gradient(100deg, rgba(0,179,74,.97) 0%, "
+            "rgba(0,196,180,.95) 28%, rgba(30,107,255,.86) 58%, "
+            "rgba(139,18,214,.80) 100%)"
+        ),
+    )
+    st.markdown(
+        f"<style>.stApp{{background:{fundo}!important;"
+        "background-size:cover,cover!important;"
+        "background-position:center,right center!important;}</style>",
         unsafe_allow_html=True,
     )
 
