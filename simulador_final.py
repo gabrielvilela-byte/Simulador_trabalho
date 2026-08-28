@@ -7,15 +7,15 @@ from datetime import date
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
 # =================================================================
-st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="wide", initial_sidebar_state="expanded")
+# Usamos "centered" como padrão para manter o simulador limpo. A Home vai forçar o "wide" via CSS.
+st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="centered", initial_sidebar_state="expanded")
 
-# --- CSS GLOBAL (Aplica-se a todas as telas) ---
 st.markdown("""
     <style>
     /* Cores das fontes e elementos principais do conteúdo */
     h1, h2, h3, h4, h5, h6, .st-emotion-cache-10trblm { color: #1B365D !important; font-weight: bold; }
     
-    /* Botão Principal Padrão para as telas do simulador */
+    /* Botão Principal Padrão (Azul Escuro) para as telas do simulador */
     div.stButton > button:first-child {
         background-color: #1B365D; color: white; border-radius: 8px;
         border: none; padding: 15px 24px; font-weight: bold;
@@ -100,6 +100,7 @@ planos_com_risco = ["FIESCPREV", "SESC SC (SESCPREV)", "PREVISC SENAI-MA", "SENA
 # =================================================================
 
 def arredondar(valor):
+    """Aplica o arredondamento financeiro oficial de 2 casas decimais (Round Half Up)."""
     return float(Decimal(f"{valor:.5f}").quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
 def formatar_br(valor):
@@ -108,6 +109,7 @@ def formatar_br(valor):
     return valor
 
 def converter_br(valor_str):
+    """Lê entradas com vírgula no padrão brasileiro e converte para float."""
     if isinstance(valor_str, (int, float)):
         return float(valor_str)
     if not valor_str:
@@ -623,66 +625,59 @@ st.sidebar.caption("Sistema interno desenvolvido pela equipe de Arrecadação pa
 if menu_selecionado == "Home":
     st.markdown("""
         <style>
-        /* --- 1. REMOVER BORDAS BRANCAS DO STREAMLIT NA HOME --- */
-        .appview-container .main .block-container {
-            padding-top: 0rem !important;
-            padding-right: 0rem !important;
-            padding-left: 0rem !important;
-            padding-bottom: 0rem !important;
+        /* Remove todo o padding da tela inicial para a imagem ocupar 100% do espaço horizontal e vertical */
+        .block-container, [data-testid="stAppViewBlockContainer"] {
+            padding: 0rem !important;
             max-width: 100% !important;
+            width: 100% !important;
         }
-        /* Oculta o Header padrão */
+        
+        /* Esconde a barra de título superior para um visual mais limpo */
         [data-testid="stHeader"] {
-            display: none !important;
+            display: none;
         }
-        /* Remove o arredondamento padrão das imagens */
-        [data-testid="stImage"] img {
-            border-radius: 0px !important;
+
+        /* Remove espaços indesejados abaixo da imagem */
+        [data-testid="stImage"] {
+            margin-bottom: 0 !important;
         }
-        
-        /* --- 2. PREPARAR O CONTAINER PARA O BOTÃO FLUTUANTE --- */
-        [data-testid="stVerticalBlock"] {
-            position: relative;
-        }
-        
-        /* Puxa o botão flutuante para cima da imagem */
+
+        /* Sobreposição Mágica: Posiciona o botão Streamlit exatamente sobre o desenho da imagem */
         div[data-testid="stButton"] {
-            position: absolute;
-            bottom: 12%; /* ATENÇÃO: Ajuste essa porcentagem para mover o botão para cima ou para baixo */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 999;
             display: flex;
             justify-content: center;
+            margin-top: -12%; /* Valor percentual que sobe e acompanha responsivamente a largura e altura da imagem */
+            position: relative;
+            z-index: 10;
+            padding-bottom: 5%; /* Respiro inferior */
         }
         
-        /* --- 3. CRIAR O "HOTSPOT" INVISÍVEL SOBRE O DESENHO DA IMAGEM --- */
+        /* O Botão de fato */
         div.stButton > button[kind="primary"] {
-            background-color: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            width: 200px !important; 
-            height: 50px !important;
-            cursor: pointer !important;
-        }
-        /* Torna o texto do botão transparente */
-        div.stButton > button[kind="primary"] p, 
-        div.stButton > button[kind="primary"] * {
-            color: transparent !important;
-        }
-        /* Efeito de brilho para o usuário saber que a área é clicável */
-        div.stButton > button[kind="primary"]:hover {
-            background-color: rgba(255, 255, 255, 0.2) !important;
+            background-color: #2F75D2 !important;
+            color: white !important;
             border-radius: 8px !important;
+            padding: 12px 50px !important;
+            font-size: 20px !important;
+            font-weight: bold !important;
+            width: auto !important;
+            border: 2px solid white !important;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.5) !important;
+        }
+        div.stButton > button[kind="primary"]:hover {
+            background-color: #1B365D !important;
+            transform: scale(1.05);
         }
         </style>
     """, unsafe_allow_html=True)
     
     try:
+        # A imagem renderiza grande, batendo nos cantos
         st.image("image_97db40.png", use_container_width=True)
     except Exception:
         st.error("⚠️ Salve a imagem com o nome exato de 'image_97db40.png' na mesma pasta deste arquivo de código.")
         
+    # O CSS puxa este botão para CIMA, sobrepondo o desenho estático
     if st.button("Calcule agora", type="primary"):
         st.session_state['menu_selecionado'] = "Simulador Individual"
         st.rerun()
