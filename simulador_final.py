@@ -11,10 +11,10 @@ st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="wide"
 
 st.markdown("""
     <style>
-    /* Cores das fontes e elementos principais */
+    /* Cores das fontes e elementos principais do conteúdo */
     h1, h2, h3, h4, h5, h6, .st-emotion-cache-10trblm { color: #1B365D !important; font-weight: bold; }
     
-    /* Botão Principal */
+    /* Botão Principal Padrão (Azul Previsc) */
     div.stButton > button:first-child {
         background-color: #1B365D; color: white; border-radius: 8px;
         border: none; padding: 15px 24px; font-weight: bold;
@@ -24,6 +24,17 @@ st.markdown("""
     div.stButton > button:first-child:hover { 
         background-color: #274D85; color: white; 
         transform: scale(1.02); box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+    }
+    
+    /* Botão Primário "Calcule agora" (Azul mais claro para destaque) */
+    div.stButton > button[kind="primary"] {
+        background-color: #3b82f6 !important; 
+        color: white !important;
+        border-radius: 20px !important;
+        font-size: 18px !important;
+    }
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #2563eb !important;
     }
     
     /* Estilo das Abas */
@@ -41,9 +52,19 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* Estilização da Sidebar */
+    /* === ESTILIZAÇÃO DA BARRA LATERAL (SIDEBAR PREVISC) === */
     [data-testid="stSidebar"] {
-        background-color: #f0f2f6;
+        background-color: #1B365D;
+        background-image: linear-gradient(180deg, #1B365D 0%, #3a1b5d 100%);
+    }
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+    /* Cor de fundo para as opções selecionadas no radio button da sidebar */
+    [data-testid="stSidebar"] .st-emotion-cache-1n76uvr {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 5px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -529,7 +550,6 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
     tx_adm = plano.get("tx_adm", 0.0)
     
     if plano_nome == "UNIVALIPrevidencia":
-        # Autopatrocínio Univali: assume regra fixa integral (Não Migrante, Normal, Tempo >= 10, sem cortes)
         teto_rs = plano["ur"] * plano["teto_urs"]
         sug_f1 = arredondar(salario * plano["aliq_1"]) if salario <= teto_rs else arredondar(teto_rs * plano["aliq_1"])
         sug_f2 = 0.0
@@ -587,11 +607,10 @@ def descobrir_salario_autopatrocinio(plano_nome, cobranca_alvo, aliq_escolhida=N
 # =================================================================
 # 4. NAVEGAÇÃO LATERAL (SIDEBAR)
 # =================================================================
-st.sidebar.markdown("<h2 style='text-align: center; color: #1B365D; margin-bottom: 0px;'>PREVISC</h2>", unsafe_allow_html=True)
-st.sidebar.markdown("<p style='text-align: center; color: #1B365D; font-weight: bold; font-size: 14px; margin-top: -10px;'>PREVIDÊNCIA COMPLEMENTAR</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<h2 style='text-align: center; color: white; margin-bottom: 0px;'>PREVISC</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='text-align: center; color: white; font-weight: bold; font-size: 14px; margin-top: -10px;'>PREVIDÊNCIA COMPLEMENTAR</p>", unsafe_allow_html=True)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-# Opções idênticas ao PDF
 opcoes_menu = [
     "Home",
     "Simulador de autopatrocínio",
@@ -614,11 +633,17 @@ st.sidebar.caption("Sistema interno desenvolvido pela equipe de Arrecadação pa
 # 5.0 HOME
 # -----------------------------------------------------------------
 if menu_selecionado == "Home":
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center; color: #1B365D; font-size: 4em; letter-spacing: 2px;'>PREVISC</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; color: #4A5568;'>Planeje hoje o futuro que quer viver amanhã.</h3>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.2em;'>Quer saber quanto investir para chegar lá?</p>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.2em; font-weight: bold;'>Selecione uma opção no menu lateral para calcular agora.</p>", unsafe_allow_html=True)
+    try:
+        st.image("image_97db40.png", use_container_width=True)
+    except FileNotFoundError:
+        st.error("⚠️ Atenção: Para que o visual fique idêntico ao modelo, salve a imagem enviada na mesma pasta deste código com o nome exato de 'image_97db40.png'.")
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("Calcule agora", type="primary"):
+            st.session_state['menu_selecionado'] = "Simulador Individual"
+            st.rerun()
 
 
 # -----------------------------------------------------------------
