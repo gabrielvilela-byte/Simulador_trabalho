@@ -567,11 +567,11 @@ def descobrir_salario_autopatrocinio(plano_nome, cobranca_alvo, aliq_escolhida=N
 # 4. NAVEGAÇÃO CENTRAL E TELA HOME
 # =================================================================
 PAGINAS = [
+    ("Simulador Individual", "Simulador individual"),
     ("Simulador de Autopatrocínio", "Simulador de autopatrocínio"),
     ("Cálculo de Contribuição em Lote", "Cálculo de contribuição em lote"),
-    ("Regras e Bases de Cálculo", "Regras e bases de cálculo"),
-    ("Simulador Individual", "Simulador individual"),
     ("Cálculo de Salário em Lote", "Cálculo de salário em lote"),
+    ("Regras e Bases de Cálculo", "Regras e bases de cálculo"),
 ]
 
 
