@@ -7,15 +7,17 @@ from datetime import date
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
 # =================================================================
-st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="centered")
+st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
-    h1, h2, h3 { color: #1B365D !important; }
+    /* Cores das fontes e elementos principais */
+    h1, h2, h3, h4, h5, h6, .st-emotion-cache-10trblm { color: #1B365D !important; font-weight: bold; }
     
+    /* Botão Principal */
     div.stButton > button:first-child {
         background-color: #1B365D; color: white; border-radius: 8px;
-        border: none; padding: 20px 24px; font-weight: bold;
+        border: none; padding: 15px 24px; font-weight: bold;
         width: 100%; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         transition: all 0.2s ease-in-out;
     }
@@ -24,16 +26,24 @@ st.markdown("""
         transform: scale(1.02); box-shadow: 0 6px 10px rgba(0,0,0,0.15);
     }
     
+    /* Estilo das Abas */
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        font-weight: bold; color: #1B365D;
+        font-weight: bold; color: #1B365D; font-size: 16px;
     }
     hr { border-color: #1B365D; }
     
+    /* Estilo dos Cards de Resultado */
     div[data-testid="metric-container"] {
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
         padding: 15px;
         border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    /* Estilização da Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #f0f2f6;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -160,7 +170,6 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         if is_autopatrocinio:
             return contrib_pura, contrib_pura, valor_adm, 0.0, 0.0
             
-        # Retorna o Líquido no índice 0 (Total), Pura no 1 (f1) e Valor_Adm no 2 (f2)
         return contrib_liquida, contrib_pura, valor_adm, 0.0, 0.0
     
     if tipo == "fixo":
@@ -520,25 +529,16 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
     tx_adm = plano.get("tx_adm", 0.0)
     
     if plano_nome == "UNIVALIPrevidencia":
-        if (univali_migrante == "Não Migrante" and idade_ou_tempo >= 35) or \
-           (univali_migrante == "Migrante" and idade_ou_tempo >= 30):
-            contrib_patr = 0.0
-            taxa_adm_total = arredondar(contrib_pura * tx_adm)
-        else:
-            teto_rs = plano["ur"] * plano["teto_urs"]
-            sug_f1 = arredondar(salario * plano["aliq_1"]) if salario <= teto_rs else arredondar(teto_rs * plano["aliq_1"])
-            sug_f2 = 0.0
-            if salario > teto_rs:
-                sug_f2 = arredondar((salario - teto_rs) * 0.17) if univali_migrante == "Não Migrante" else arredondar((salario - teto_rs) * 0.14)
-            sugerida_total = arredondar(sug_f1 + sug_f2)
-            
-            fator_tempo = 1.0 if idade_ou_tempo >= 10 else 0.5
-            contrib_patr = arredondar(sugerida_total * fator_tempo)
-            
-            taxa_adm_part = arredondar(contrib_pura * tx_adm)
-            taxa_adm_patroc = 0.0 if univali_migrante == "Migrante" else arredondar(contrib_patr * tx_adm)
-            taxa_adm_total = arredondar(taxa_adm_part + taxa_adm_patroc)
-            
+        # Autopatrocínio Univali: assume regra fixa integral (Não Migrante, Normal, Tempo >= 10, sem cortes)
+        teto_rs = plano["ur"] * plano["teto_urs"]
+        sug_f1 = arredondar(salario * plano["aliq_1"]) if salario <= teto_rs else arredondar(teto_rs * plano["aliq_1"])
+        sug_f2 = 0.0
+        if salario > teto_rs:
+            sug_f2 = arredondar((salario - teto_rs) * 0.17)
+        sugerida_total = arredondar(sug_f1 + sug_f2)
+        
+        contrib_patr = sugerida_total
+        taxa_adm_total = arredondar((contrib_pura + contrib_patr) * tx_adm)
         return arredondar(contrib_pura + contrib_patr + taxa_adm_total)
 
     if plano_nome in ["FIEMTPREV", "SENAI-PIPREV"]:
@@ -585,64 +585,50 @@ def descobrir_salario_autopatrocinio(plano_nome, cobranca_alvo, aliq_escolhida=N
 
 
 # =================================================================
-# 4. NAVEGAÇÃO CENTRAL E TELA HOME
+# 4. NAVEGAÇÃO LATERAL (SIDEBAR)
 # =================================================================
-if 'menu_selecionado' not in st.session_state:
-    st.session_state['menu_selecionado'] = 'home'
+st.sidebar.markdown("<h2 style='text-align: center; color: #1B365D; margin-bottom: 0px;'>PREVISC</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='text-align: center; color: #1B365D; font-weight: bold; font-size: 14px; margin-top: -10px;'>PREVIDÊNCIA COMPLEMENTAR</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-menu_selecionado = st.session_state['menu_selecionado']
+# Opções idênticas ao PDF
+opcoes_menu = [
+    "Home",
+    "Simulador de autopatrocínio",
+    "Cálculo de contribuição em lote",
+    "Regras e bases de cálculo",
+    "Simulador Individual",
+    "Cálculo de salário em lote"
+]
 
-if menu_selecionado == 'home':
-    st.markdown("<br><br><h1 style='text-align: center; color: #1B365D; font-size: 3.5em; letter-spacing: 2px;'>PREVISC</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.2em; color: #4A5568;'>Selecione a ferramenta de cálculo desejada:</p><br><br>", unsafe_allow_html=True)
-    
-    col1, col_espaco, col2 = st.columns([1, 0.1, 1])
-    
-    with col1:
-        if st.button("📊 Simulador Individual", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Simulador Individual"
-            st.rerun()
-        st.write("") 
-        if st.button("📂 Cálculo de Salário em Lote", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Cálculo de Salário em Lote"
-            st.rerun()
-            
-    with col2:
-        if st.button("📂 Cálculo de Contribuição em Lote", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Cálculo de Contribuição em Lote"
-            st.rerun()
-        st.write("") 
-        if st.button("📖 Regras e Bases de Cálculo", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Regras e Bases de Cálculo"
-            st.rerun()
-            
-    st.write("")
-    st.write("")
-    if st.button("👤 Simulador de Autopatrocínio", use_container_width=True):
-        st.session_state['menu_selecionado'] = "Simulador de Autopatrocínio"
-        st.rerun()
+menu_selecionado = st.sidebar.radio("Navegação", opcoes_menu, label_visibility="collapsed")
 
-else:
-    st.sidebar.title("📌 Navegação")
-    if st.sidebar.button("🏠 Voltar ao Menu Principal", use_container_width=True):
-        st.session_state['menu_selecionado'] = 'home'
-        st.rerun()
-    st.sidebar.divider()
-    st.sidebar.info("Sistema interno desenvolvido pela equipe de Arrecadação para processar cálculos previdenciários (individuais e em lote) de Participantes Ativos e Autopatrocinados, integrado à consulta rápida das regras vigentes.")
-
+st.sidebar.divider()
+st.sidebar.caption("Sistema interno desenvolvido pela equipe de Arrecadação para processar cálculos previdenciários (individuais e em lote) de Participantes Ativos e Autopatrocinados, integrado à consulta rápida das regras vigentes.")
 
 # =================================================================
-# 5. TELAS INDIVIDUAIS: ATIVO E AUTOPATROCÍNIO
+# 5. TELAS
 # =================================================================
+
+# -----------------------------------------------------------------
+# 5.0 HOME
+# -----------------------------------------------------------------
+if menu_selecionado == "Home":
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #1B365D; font-size: 4em; letter-spacing: 2px;'>PREVISC</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #4A5568;'>Planeje hoje o futuro que quer viver amanhã.</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 1.2em;'>Quer saber quanto investir para chegar lá?</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 1.2em; font-weight: bold;'>Selecione uma opção no menu lateral para calcular agora.</p>", unsafe_allow_html=True)
+
 
 # -----------------------------------------------------------------
 # 5.1 TELA: SIMULADOR INDIVIDUAL (ATIVO)
 # -----------------------------------------------------------------
-if menu_selecionado == "Simulador Individual":
-    st.title("🏢 Simulador Previsc")
-    st.write("Selecione o plano abaixo para calcular a contribuição sugerida ou calcular o salário a partir da contribuição.")
+elif menu_selecionado == "Simulador Individual":
+    st.markdown("<h2>Simulador Previsc</h2>", unsafe_allow_html=True)
+    st.markdown("<p>selecione o plano abaixo para calcular a contribuição sugerida ou calcular o salário a partir da contribuição</p>", unsafe_allow_html=True)
 
-    plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
+    plano_selecionado = st.selectbox("selecione o plano de previdência", options=list(planos.keys()))
     plano_dados = planos[plano_selecionado]
 
     univali_migrante = "Migrante"
@@ -707,12 +693,11 @@ if menu_selecionado == "Simulador Individual":
         faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key=f"faixa_{plano_selecionado}_ativo")
 
     st.divider()
-    aba_normal, aba_reversa = st.tabs(["📊 Cálculo de Contribuição", "🔍 Cálculo de Salário"])
+    aba_normal, aba_reversa = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
 
     with aba_normal:
-        st.subheader("Calcular Contribuição")
         
-        salario_input_str = st.text_input("Digite o Salário de Participação (R$):", value="0,00", key="sal_normal")
+        salario_input_str = st.text_input("SP", value="0,00", key="sal_normal")
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida = None
@@ -740,7 +725,7 @@ if menu_selecionado == "Simulador Individual":
         if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
             st.info(f"A UP atual adotada para o plano {plano_selecionado} é de R$ {formatar_br(plano_dados['up'])}")
         
-        if st.button("Gerar Cálculo", type="primary"):
+        if st.button("Gerar cálculo", type="primary"):
             if salario_input > 0:
                 total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
@@ -902,7 +887,6 @@ if menu_selecionado == "Simulador Individual":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa:
-        st.subheader("Cálculo de Salário a partir da Contribuição")
         
         contrib_input_str = st.text_input("Digite a Contribuição Alvo (R$):", value="0,00", key="contrib_reversa")
         contrib_input = converter_br(contrib_input_str)
@@ -926,11 +910,11 @@ if menu_selecionado == "Simulador Individual":
 # -----------------------------------------------------------------
 # 5.2 TELA: SIMULADOR AUTOPATROCÍNIO
 # -----------------------------------------------------------------
-elif menu_selecionado == "Simulador de Autopatrocínio":
-    st.title("👤 Simulador de Autopatrocínio")
-    st.write("Verifique a cobrança a partir do salário ou faça o cálculo reverso (Gross-up) a partir do valor desejado da cobrança mensal.")
+elif menu_selecionado == "Simulador de autopatrocínio":
+    st.markdown("<h2>Simulador Previsc - Autopatrocínio</h2>", unsafe_allow_html=True)
+    st.markdown("<p>Verifique a cobrança a partir do salário ou faça o cálculo reverso (Gross-up) a partir do valor desejado da cobrança mensal.</p>", unsafe_allow_html=True)
 
-    plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()), key="sel_plano_auto")
+    plano_selecionado = st.selectbox("selecione o plano de previdência", options=list(planos.keys()), key="sel_plano_auto")
     plano_dados = planos[plano_selecionado]
 
     univali_migrante = "Migrante"
@@ -984,12 +968,11 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 
     st.divider()
 
-    aba_normal_auto, aba_reversa_auto = st.tabs(["📊 Cálculo da Cobrança", "🔍 Cálculo de Salário"])
+    aba_normal_auto, aba_reversa_auto = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
 
     with aba_normal_auto:
-        st.subheader("Calcular Cobrança a partir do Salário")
         
-        salario_input_str = st.text_input("Digite o Salário de Participação (R$):", value="0,00", key="sal_auto")
+        salario_input_str = st.text_input("SP", value="0,00", key="sal_auto")
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida_auto = None
@@ -1008,7 +991,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
             st.info(f"A UP atual adotada para o plano {plano_selecionado} é de R$ {formatar_br(plano_dados['up'])}")
             
-        if st.button("Gerar Cálculo de Cobrança", type="primary"):
+        if st.button("Gerar cálculo", type="primary"):
             if salario_input > 0:
                 tx_adm_plano = plano_dados.get("tx_adm", 0.0)
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
@@ -1184,7 +1167,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa_auto:
-        st.subheader("Descobrir Salário a partir do Boleto Desejado")
         
         cobranca_input_str = st.text_input("Digite o Valor do Boleto Mensal (R$):", value="0,00", key="cobranca_auto_rev")
         cobranca_input = converter_br(cobranca_input_str)
@@ -1367,8 +1349,8 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 # =================================================================
 # 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de Contribuição em Lote":
-    st.title("📂 Cálculo de Contribuição em Lote")
+elif menu_selecionado == "Cálculo de contribuição em lote":
+    st.markdown("<h2>Cálculo de Contribuição em Lote</h2>", unsafe_allow_html=True)
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
     df_modelo = pd.DataFrame({
@@ -1458,8 +1440,8 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
 # =================================================================
 # 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de Salário em Lote":
-    st.title("📂 Cálculo de Salário em Lote")
+elif menu_selecionado == "Cálculo de salário em lote":
+    st.markdown("<h2>Cálculo de Salário em Lote</h2>", unsafe_allow_html=True)
     st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
     df_modelo_rev = pd.DataFrame({
@@ -1552,8 +1534,8 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
 # =================================================================
 # 8. TELA 4: REGRAS E BASES DE CÁLCULO
 # =================================================================
-elif menu_selecionado == "Regras e Bases de Cálculo":
-    st.title("📖 Regras e Bases de Cálculo")
+elif menu_selecionado == "Regras e bases de cálculo":
+    st.markdown("<h2>Regras e Bases de Cálculo</h2>", unsafe_allow_html=True)
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
     dados_tabela = [
