@@ -7,14 +7,15 @@ from datetime import date
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
 # =================================================================
-st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="wide", initial_sidebar_state="expanded")
+# Usamos "centered" como padrão para manter o simulador limpo. A Home vai forçar o "wide" via CSS.
+st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="centered", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
     /* Cores das fontes e elementos principais do conteúdo */
     h1, h2, h3, h4, h5, h6, .st-emotion-cache-10trblm { color: #1B365D !important; font-weight: bold; }
     
-    /* Botão Principal Padrão (Azul Previsc) */
+    /* Botão Principal Padrão (Azul Escuro) para as telas do simulador */
     div.stButton > button:first-child {
         background-color: #1B365D; color: white; border-radius: 8px;
         border: none; padding: 15px 24px; font-weight: bold;
@@ -24,17 +25,6 @@ st.markdown("""
     div.stButton > button:first-child:hover { 
         background-color: #274D85; color: white; 
         transform: scale(1.02); box-shadow: 0 6px 10px rgba(0,0,0,0.15);
-    }
-    
-    /* Botão Primário "Calcule agora" (Azul mais claro para destaque) */
-    div.stButton > button[kind="primary"] {
-        background-color: #3b82f6 !important; 
-        color: white !important;
-        border-radius: 20px !important;
-        font-size: 18px !important;
-    }
-    div.stButton > button[kind="primary"]:hover {
-        background-color: #2563eb !important;
     }
     
     /* Estilo das Abas */
@@ -60,9 +50,9 @@ st.markdown("""
     [data-testid="stSidebar"] * {
         color: white !important;
     }
-    /* Cor de fundo para as opções selecionadas no radio button da sidebar */
+    /* Cor de fundo para a opção selecionada no menu lateral */
     [data-testid="stSidebar"] .st-emotion-cache-1n76uvr {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: rgba(255, 255, 255, 0.15);
         border-radius: 8px;
         padding: 5px;
     }
@@ -633,17 +623,64 @@ st.sidebar.caption("Sistema interno desenvolvido pela equipe de Arrecadação pa
 # 5.0 HOME
 # -----------------------------------------------------------------
 if menu_selecionado == "Home":
-    try:
-        st.image("image_97db40.png", use_container_width=True)
-    except FileNotFoundError:
-        st.error("⚠️ Atenção: Para que o visual fique idêntico ao modelo, salve a imagem enviada na mesma pasta deste código com o nome exato de 'image_97db40.png'.")
+    st.markdown("""
+        <style>
+        /* Remove todo o padding da tela inicial para a imagem ocupar 100% do espaço horizontal e vertical */
+        .block-container, [data-testid="stAppViewBlockContainer"] {
+            padding: 0rem !important;
+            max-width: 100% !important;
+            width: 100% !important;
+        }
         
-    st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        if st.button("Calcule agora", type="primary"):
-            st.session_state['menu_selecionado'] = "Simulador Individual"
-            st.rerun()
+        /* Esconde a barra de título superior para um visual mais limpo */
+        [data-testid="stHeader"] {
+            display: none;
+        }
+
+        /* Remove espaços indesejados abaixo da imagem */
+        [data-testid="stImage"] {
+            margin-bottom: 0 !important;
+        }
+
+        /* Sobreposição Mágica: Posiciona o botão Streamlit exatamente sobre o desenho da imagem */
+        div[data-testid="stButton"] {
+            display: flex;
+            justify-content: center;
+            margin-top: -12%; /* Valor percentual que sobe e acompanha responsivamente a largura e altura da imagem */
+            position: relative;
+            z-index: 10;
+            padding-bottom: 5%; /* Respiro inferior */
+        }
+        
+        /* O Botão de fato */
+        div.stButton > button[kind="primary"] {
+            background-color: #2F75D2 !important;
+            color: white !important;
+            border-radius: 8px !important;
+            padding: 12px 50px !important;
+            font-size: 20px !important;
+            font-weight: bold !important;
+            width: auto !important;
+            border: 2px solid white !important;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.5) !important;
+        }
+        div.stButton > button[kind="primary"]:hover {
+            background-color: #1B365D !important;
+            transform: scale(1.05);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    try:
+        # A imagem renderiza grande, batendo nos cantos
+        st.image("image_97db40.png", use_container_width=True)
+    except Exception:
+        st.error("⚠️ Salve a imagem com o nome exato de 'image_97db40.png' na mesma pasta deste arquivo de código.")
+        
+    # O CSS puxa este botão para CIMA, sobrepondo o desenho estático
+    if st.button("Calcule agora", type="primary"):
+        st.session_state['menu_selecionado'] = "Simulador Individual"
+        st.rerun()
 
 
 # -----------------------------------------------------------------
