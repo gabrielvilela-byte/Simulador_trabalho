@@ -1,4 +1,5 @@
 import streamlit as st
+import previsc_theme as pv
 import pandas as pd
 import io
 from decimal import Decimal, ROUND_HALF_UP
@@ -7,36 +8,14 @@ from datetime import date
 # =================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CORES
 # =================================================================
-st.set_page_config(page_title="Sistema Previsc", page_icon="🏢", layout="centered")
+st.set_page_config(page_title="Simulador Previsc", page_icon="🏢",
+                   layout="wide", initial_sidebar_state="expanded")
 
-st.markdown("""
-    <style>
-    h1, h2, h3 { color: #1B365D !important; }
-    
-    div.stButton > button:first-child {
-        background-color: #1B365D; color: white; border-radius: 8px;
-        border: none; padding: 20px 24px; font-weight: bold;
-        width: 100%; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: all 0.2s ease-in-out;
-    }
-    div.stButton > button:first-child:hover { 
-        background-color: #274D85; color: white; 
-        transform: scale(1.02); box-shadow: 0 6px 10px rgba(0,0,0,0.15);
-    }
-    
-    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        font-weight: bold; color: #1B365D;
-    }
-    hr { border-color: #1B365D; }
-    
-    div[data-testid="metric-container"] {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        padding: 15px;
-        border-radius: 8px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+if 'menu_selecionado' not in st.session_state:
+    st.session_state['menu_selecionado'] = 'home'
+menu_selecionado = st.session_state['menu_selecionado']
+
+pv.aplicar("capa" if menu_selecionado in ('home', 'menu') else "interna")
 
 
 # =================================================================
@@ -587,48 +566,45 @@ def descobrir_salario_autopatrocinio(plano_nome, cobranca_alvo, aliq_escolhida=N
 # =================================================================
 # 4. NAVEGAÇÃO CENTRAL E TELA HOME
 # =================================================================
-if 'menu_selecionado' not in st.session_state:
-    st.session_state['menu_selecionado'] = 'home'
+PAGINAS = [
+    ("Simulador de Autopatrocínio", "Simulador de autopatrocínio"),
+    ("Cálculo de Contribuição em Lote", "Cálculo de contribuição em lote"),
+    ("Regras e Bases de Cálculo", "Regras e bases de cálculo"),
+    ("Simulador Individual", "Simulador individual"),
+    ("Cálculo de Salário em Lote", "Cálculo de salário em lote"),
+]
 
-menu_selecionado = st.session_state['menu_selecionado']
+
+def _ir(destino):
+    st.session_state['menu_selecionado'] = destino
+    st.rerun()
+
 
 if menu_selecionado == 'home':
-    st.markdown("<br><br><h1 style='text-align: center; color: #1B365D; font-size: 3.5em; letter-spacing: 2px;'>PREVISC</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.2em; color: #4A5568;'>Selecione a ferramenta de cálculo desejada:</p><br><br>", unsafe_allow_html=True)
-    
-    col1, col_espaco, col2 = st.columns([1, 0.1, 1])
-    
-    with col1:
-        if st.button("📊 Simulador Individual", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Simulador Individual"
-            st.rerun()
-        st.write("") 
-        if st.button("📂 Cálculo de Salário em Lote", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Cálculo de Salário em Lote"
-            st.rerun()
-            
-    with col2:
-        if st.button("📂 Cálculo de Contribuição em Lote", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Cálculo de Contribuição em Lote"
-            st.rerun()
-        st.write("") 
-        if st.button("📖 Regras e Bases de Cálculo", use_container_width=True):
-            st.session_state['menu_selecionado'] = "Regras e Bases de Cálculo"
-            st.rerun()
-            
-    st.write("")
-    st.write("")
-    if st.button("👤 Simulador de Autopatrocínio", use_container_width=True):
-        st.session_state['menu_selecionado'] = "Simulador de Autopatrocínio"
-        st.rerun()
+    if pv.capa():
+        _ir('menu')
+
+elif menu_selecionado == 'menu':
+    pv.fundo_menu()
+    esq, centro, dir_ = st.columns([1, 1.6, 1.4])
+    with centro:
+      with st.container(key="pv_menu_card"):
+        pv.logo_sidebar()
+        for chave, rotulo in PAGINAS:
+            if st.button(rotulo, key=f"menu_{chave}", use_container_width=True):
+                _ir(chave)
+        pv.rodape_sidebar()
 
 else:
-    st.sidebar.title("📌 Navegação")
-    if st.sidebar.button("🏠 Voltar ao Menu Principal", use_container_width=True):
-        st.session_state['menu_selecionado'] = 'home'
-        st.rerun()
-    st.sidebar.divider()
-    st.sidebar.info("Sistema interno desenvolvido pela equipe de Arrecadação para processar cálculos previdenciários (individuais e em lote) de Participantes Ativos e Autopatrocinados, integrado à consulta rápida das regras vigentes.")
+    with st.sidebar:
+        pv.logo_sidebar()
+        for chave, rotulo in PAGINAS:
+            if st.button(rotulo, key=f"nav_{chave}", use_container_width=True):
+                _ir(chave)
+        if st.button("Voltar ao menu principal", key="nav_home",
+                     use_container_width=True):
+            _ir('menu')
+        pv.rodape_sidebar()
 
 
 # =================================================================
@@ -639,7 +615,7 @@ else:
 # 5.1 TELA: SIMULADOR INDIVIDUAL (ATIVO)
 # -----------------------------------------------------------------
 if menu_selecionado == "Simulador Individual":
-    st.title("🏢 Simulador Previsc")
+    pv.titulo_pagina("Simulador Previsc")
     st.write("Selecione o plano abaixo para calcular a contribuição sugerida ou calcular o salário a partir da contribuição.")
 
     plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()))
@@ -927,7 +903,7 @@ if menu_selecionado == "Simulador Individual":
 # 5.2 TELA: SIMULADOR AUTOPATROCÍNIO
 # -----------------------------------------------------------------
 elif menu_selecionado == "Simulador de Autopatrocínio":
-    st.title("👤 Simulador de Autopatrocínio")
+    pv.titulo_pagina("👤 Simulador de Autopatrocínio")
     st.write("Verifique a cobrança a partir do salário ou faça o cálculo reverso (Gross-up) a partir do valor desejado da cobrança mensal.")
 
     plano_selecionado = st.selectbox("Selecione o Plano de Previdência:", options=list(planos.keys()), key="sel_plano_auto")
@@ -1368,7 +1344,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 # 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
 # =================================================================
 elif menu_selecionado == "Cálculo de Contribuição em Lote":
-    st.title("📂 Cálculo de Contribuição em Lote")
+    pv.titulo_pagina("📂 Cálculo de Contribuição em Lote")
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
     df_modelo = pd.DataFrame({
@@ -1459,7 +1435,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
 # 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
 # =================================================================
 elif menu_selecionado == "Cálculo de Salário em Lote":
-    st.title("📂 Cálculo de Salário em Lote")
+    pv.titulo_pagina("📂 Cálculo de Salário em Lote")
     st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
     df_modelo_rev = pd.DataFrame({
@@ -1553,7 +1529,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
 # 8. TELA 4: REGRAS E BASES DE CÁLCULO
 # =================================================================
 elif menu_selecionado == "Regras e Bases de Cálculo":
-    st.title("📖 Regras e Bases de Cálculo")
+    pv.titulo_pagina("📖 Regras e Bases de Cálculo")
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
     dados_tabela = [
