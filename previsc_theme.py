@@ -32,6 +32,7 @@ def _sel(prefixo: str, chave: str) -> str:
 
 
 def _css_ordem(prefixo: str) -> str:
+    return ""  # ordem agora vem da lista PAGINAS no app
     regras = [
         'section[data-testid="stSidebar"] [data-testid="stVerticalBlock"],'
         " .st-key-pv_menu_card{display:flex;flex-direction:column;}"
