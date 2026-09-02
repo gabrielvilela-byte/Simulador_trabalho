@@ -32,7 +32,7 @@ planos = {
     "FIEMTPREV": {"ur": 715.77, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_univali"},
     "SESI-PIPREV": {"ur": 6812.53, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "sesi_piprev_deducao"},
-    "SESC SC (SESCPREV)": {"ur": 922.63, "teto1_rs": 8787.00, "teto2_rs": 10042.49, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tx_adm": 0.0218, "tx_risco": 0.0012, "tipo": "sesc_triplo"},
+    "SESC SC (SESCPREV)": {"ur": 922.63, "teto1_urs": 10.0, "teto2_urs": 11.4288, "aliq_1": 0.0139, "aliq_2": 0.0558, "aliq_3": 0.1366, "tx_adm": 0.0218, "tx_risco": 0.0012, "tipo": "sesc_triplo_ur"},
     "LUNELLIPREV": {"aliq_1": 0.01, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "lunelliprev"},
     "PREVIFIEA": {"up": 8258.59, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiepa"},
     "PREVITÊ": {"ur": 682.87, "teto_urs": 0, "aliq_1": 0, "aliq_2": 0, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "fixo"},
@@ -139,7 +139,6 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         if is_autopatrocinio:
             return contrib_pura, contrib_pura, valor_adm, 0.0, 0.0
             
-        # Retorna o Líquido no índice 0 (Total), Pura no 1 (f1) e Valor_Adm no 2 (f2)
         return contrib_liquida, contrib_pura, valor_adm, 0.0, 0.0
     
     if tipo == "fixo":
@@ -235,10 +234,10 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         superavit = arredondar(total_bruto * taxa_superavit)
         return arredondar(total_bruto - superavit), f1, f2, 0.0, superavit
 
-    if tipo == "sesc_triplo":
+    if tipo == "sesc_triplo_ur":
         ur = plano["ur"]
-        teto1_rs = plano["teto1_rs"]
-        teto2_rs = plano["teto2_rs"]
+        teto1_rs = ur * plano["teto1_urs"]
+        teto2_rs = ur * plano["teto2_urs"]
         
         if salario <= teto1_rs:
             total_bruto = arredondar(salario * plano["aliq_1"])
@@ -424,10 +423,10 @@ def _calcular_salario_reverso_matematico(plano_nome, contribuicao_liquida, aliq_
         else:
             return teto_rs + ((contribuicao - max_f1) / aliq_2)
 
-    if tipo == "sesc_triplo":
+    if tipo == "sesc_triplo_ur":
         ur = plano["ur"]
-        teto1_rs = plano["teto1_rs"]
-        teto2_rs = plano["teto2_rs"]
+        teto1_rs = ur * plano["teto1_urs"]
+        teto2_rs = ur * plano["teto2_urs"]
         
         max_c1 = teto1_rs * plano["aliq_1"]
         max_c2 = (teto2_rs * plano["aliq_2"]) - (0.4190 * ur)
@@ -769,7 +768,7 @@ if menu_selecionado == "Simulador Individual":
                     col_f3.metric("Faixa Topo (Excedente)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "SESC SC (SESCPREV)":
                     st.success(f"### Contribuição Sugerida (Participante): R$ {formatar_br(total)}")
-                    st.info("Cálculo realizado via fator de Parcela a Deduzir.")
+                    st.info("Cálculo realizado via fator de Parcela a Deduzir (como INSS).")
                     if f3 > 0:
                         col_f1, col_f2, col_f3 = st.columns(3)
                         col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
@@ -1397,7 +1396,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 # =================================================================
 # 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de Contribuição em Lote":
+elif menu_selecionado == "Cálculo de contribuição em lote":
     pv.titulo_pagina("📂 Cálculo de Contribuição em Lote")
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
@@ -1488,7 +1487,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
 # =================================================================
 # 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de Salário em Lote":
+elif menu_selecionado == "Cálculo de salário em lote":
     pv.titulo_pagina("📂 Cálculo de Salário em Lote")
     st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
@@ -1582,7 +1581,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
 # =================================================================
 # 8. TELA 4: REGRAS E BASES DE CÁLCULO
 # =================================================================
-elif menu_selecionado == "Regras e Bases de Cálculo":
+elif menu_selecionado == "Regras e bases de cálculo":
     pv.titulo_pagina("📖 Regras e Bases de Cálculo")
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
@@ -1597,7 +1596,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%"},
         {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18% (1x ou 2x dependendo da contrapartida e migração) - Contrapartida: 50% (< 10 anos) ou 100% (>= 10 anos) da sugerida, zera se Tempo >= 35 (Não Migrante) ou >= 30 (Migrante)."},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fórmula Direta c/ Parcela a Deduzir: (Salário * 13,7741%) - (SP * 12,2124%) e deduz a Taxa Adm (2,18%) na exibição"},
-        {"Plano": "SESC SC (SESCPREV)", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Faixas de Dedução (como INSS): 1,39% (Até R$ 8.787,00) | 5,58% (R$ 8.787,01 a R$ 10.042,49) | 13,66% (Acima)"},
+        {"Plano": "SESC SC (SESCPREV)", "Indexador": "UR", "Valor (R$)": "922,63", "Regra de Cálculo": "Faixas de Dedução dinâmicas (Até 10 URs | 10 a 11.4288 URs | Acima). Taxa Adm: 2,18%. Risco opcional: 0,12%."},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
         {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "8.258,59", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
         {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo sobre a Base Total conforme a idade."},
