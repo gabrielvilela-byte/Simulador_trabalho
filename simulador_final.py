@@ -58,6 +58,7 @@ planos_com_risco = ["FIESCPREV", "SESC SC (SESCPREV)", "PREVISC SENAI-MA", "SENA
 # =================================================================
 
 def arredondar(valor):
+    """Aplica o arredondamento financeiro oficial de 2 casas decimais (Round Half Up)."""
     return float(Decimal(f"{valor:.5f}").quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
 def formatar_br(valor):
@@ -66,6 +67,7 @@ def formatar_br(valor):
     return valor
 
 def converter_br(valor_str):
+    """Lê entradas com vírgula no padrão brasileiro e converte para float."""
     if isinstance(valor_str, (int, float)):
         return float(valor_str)
     if not valor_str:
@@ -691,7 +693,7 @@ if menu_selecionado == "Simulador Individual":
 
     with aba_normal:
         
-        salario_input_str = st.text_input("SP", value="0,00", key="sal_normal")
+        salario_input_str = st.text_input("Digite o Salário atual", value="0,00", key="sal_normal")
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida = None
@@ -966,7 +968,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 
     with aba_normal_auto:
         
-        salario_input_str = st.text_input("SP", value="0,00", key="sal_auto")
+        salario_input_str = st.text_input("Digite o Salário atual", value="0,00", key="sal_auto")
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida_auto = None
@@ -1601,4 +1603,3 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
     ]
     
     st.dataframe(pd.DataFrame(dados_tabela), use_container_width=True, hide_index=True)
-        
