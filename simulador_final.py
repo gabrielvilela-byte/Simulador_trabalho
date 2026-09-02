@@ -58,7 +58,6 @@ planos_com_risco = ["FIESCPREV", "SESC SC (SESCPREV)", "PREVISC SENAI-MA", "SENA
 # =================================================================
 
 def arredondar(valor):
-    """Aplica o arredondamento financeiro oficial de 2 casas decimais (Round Half Up)."""
     return float(Decimal(f"{valor:.5f}").quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
 def formatar_br(valor):
@@ -67,7 +66,6 @@ def formatar_br(valor):
     return valor
 
 def converter_br(valor_str):
-    """Lê entradas com vírgula no padrão brasileiro e converte para float."""
     if isinstance(valor_str, (int, float)):
         return float(valor_str)
     if not valor_str:
@@ -906,7 +904,7 @@ if menu_selecionado == "Simulador Individual":
 # -----------------------------------------------------------------
 # 5.2 TELA: SIMULADOR AUTOPATROCÍNIO
 # -----------------------------------------------------------------
-elif menu_selecionado == "Simulador de autopatrocínio":
+elif menu_selecionado == "Simulador de Autopatrocínio":
     pv.titulo_pagina("👤 Simulador de Autopatrocínio")
     st.write("Verifique a cobrança a partir do salário ou faça o cálculo reverso (Gross-up) a partir do valor desejado da cobrança mensal.")
 
@@ -1047,7 +1045,7 @@ elif menu_selecionado == "Simulador de autopatrocínio":
                     col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                     col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
-                    
+
                 elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA", "UNERJPREV"]:
                     contrib_patr = contrib_pura
                     total_cobranca = arredondar(contrib_pura + contrib_patr)
@@ -1395,7 +1393,7 @@ elif menu_selecionado == "Simulador de autopatrocínio":
 # =================================================================
 # 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de contribuição em lote":
+elif menu_selecionado == "Cálculo de Contribuição em Lote":
     pv.titulo_pagina("📂 Cálculo de Contribuição em Lote")
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
@@ -1486,7 +1484,7 @@ elif menu_selecionado == "Cálculo de contribuição em lote":
 # =================================================================
 # 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de salário em lote":
+elif menu_selecionado == "Cálculo de Salário em Lote":
     pv.titulo_pagina("📂 Cálculo de Salário em Lote")
     st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
@@ -1580,7 +1578,7 @@ elif menu_selecionado == "Cálculo de salário em lote":
 # =================================================================
 # 8. TELA 4: REGRAS E BASES DE CÁLCULO
 # =================================================================
-elif menu_selecionado == "Regras e bases de cálculo":
+elif menu_selecionado == "Regras e Bases de Cálculo":
     pv.titulo_pagina("📖 Regras e Bases de Cálculo")
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
@@ -1603,3 +1601,4 @@ elif menu_selecionado == "Regras e bases de cálculo":
     ]
     
     st.dataframe(pd.DataFrame(dados_tabela), use_container_width=True, hide_index=True)
+        
