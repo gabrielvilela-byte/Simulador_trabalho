@@ -139,6 +139,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         if is_autopatrocinio:
             return contrib_pura, contrib_pura, valor_adm, 0.0, 0.0
             
+        # Retorna o Líquido no índice 0 (Total), Pura no 1 (f1) e Valor_Adm no 2 (f2)
         return contrib_liquida, contrib_pura, valor_adm, 0.0, 0.0
     
     if tipo == "fixo":
@@ -540,8 +541,8 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         return arredondar(contrib_pura + contrib_patr)
         
     elif plano_nome == "SESC SC (SESCPREV)":
-        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm)
-        contrib_patr = contrib_pura
+        taxa_adm_total = arredondar(contrib_pura * tx_adm)
+        contrib_patr = 0.0
         return arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
         
     # Default Fallback (FIESCPREV, FIEP, SENACPREV, FECOMERCIO, etc.)
@@ -693,7 +694,7 @@ if menu_selecionado == "Simulador Individual":
 
     with aba_normal:
         
-        salario_input_str = st.text_input("Digite o Salário atual", value="0,00", key="sal_normal")
+        salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_normal")
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida = None
@@ -968,7 +969,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 
     with aba_normal_auto:
         
-        salario_input_str = st.text_input("Digite o Salário atual", value="0,00", key="sal_auto")
+        salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_auto")
         salario_input = converter_br(salario_input_str)
         
         aliq_escolhida_auto = None
@@ -1131,9 +1132,9 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b3.metric("Taxa Risco", "Sem Risco")
                         
                 elif plano_selecionado == "SESC SC (SESCPREV)":
-                    contrib_patr = contrib_pura
+                    contrib_patr = 0.0
                     valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
-                    taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                    taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
                     total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
@@ -1153,8 +1154,8 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     st.markdown("### Composição do Boleto")
                     col_b1, col_b2, col_b3, col_b4 = st.columns(4)
                     col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
-                    col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
-                    col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                    col_b2.metric("Contrib. Patrocinadora", "R$ 0,00")
+                    col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                     col_b4.metric(f"Taxa Risco", f"R$ {formatar_br(valor_risco)}")
                         
                 else:
@@ -1189,6 +1190,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa_auto:
+        st.subheader("Descobrir Salário a partir do Boleto Desejado")
         
         cobranca_input_str = st.text_input("Digite o Valor do Boleto Mensal (R$):", value="0,00", key="cobranca_auto_rev")
         cobranca_input = converter_br(cobranca_input_str)
@@ -1338,9 +1340,9 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                             col_b3.metric("Taxa Risco", "Sem Risco")
                             
                     elif plano_selecionado == "SESC SC (SESCPREV)":
-                        contrib_patr = contrib_pura
+                        contrib_patr = 0.0
                         valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
-                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                        taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
                         
                         st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
                         
@@ -1358,8 +1360,8 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         st.markdown("### Composição do Boleto")
                         col_b1, col_b2, col_b3, col_b4 = st.columns(4)
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
-                        col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
-                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                        col_b2.metric("Contrib. Patrocinadora", "R$ 0,00")
+                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                         col_b4.metric(f"Taxa Risco", f"R$ {formatar_br(valor_risco)}")
                             
                     else:
