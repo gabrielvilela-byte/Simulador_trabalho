@@ -501,7 +501,7 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
     tx_risco = plano.get("tx_risco_auto", plano.get("tx_risco", 0.0))
     tem_risco = plano_nome in planos_com_risco
     
-    if plano_nome in ["PREVFIEPA", "PREVIFIEA"] and "Sem Risco" in categoria_participante:
+    if "Sem Risco" in categoria_participante:
         tem_risco = False
         tx_risco = 0.0
 
@@ -718,9 +718,10 @@ if menu_selecionado == "Simulador Individual":
         faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key=f"faixa_{plano_selecionado}_ativo")
 
     st.divider()
-    aba_normal, aba_reversa = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
+    aba_normal, aba_reversa = st.tabs(["📊 Cálculo de Contribuição", "🔍 Cálculo de Salário"])
 
     with aba_normal:
+        st.subheader("Calcular Contribuição")
         
         salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_normal")
         salario_input = converter_br(salario_input_str)
@@ -750,7 +751,7 @@ if menu_selecionado == "Simulador Individual":
         if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
             st.info(f"A UP atual adotada para o plano {plano_selecionado} é de R$ {formatar_br(plano_dados['up'])}")
         
-        if st.button("Gerar cálculo", type="primary"):
+        if st.button("Gerar Cálculo", type="primary"):
             if salario_input > 0:
                 total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
@@ -870,7 +871,7 @@ if menu_selecionado == "Simulador Individual":
                     c_patr_bruta = arredondar(total + superavit)
                     taxa_adm_total = arredondar(c_patr_bruta * tx_adm_plano)
                     
-                    # Risco incide sobre a contribuição da patrocinadora deduzida da taxa administrativa
+                    # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
                     valor_risco = arredondar((c_patr_bruta - taxa_adm_total) * tx_risco_plano) if tem_risco_escolhido else 0.0
                     
                     c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
@@ -939,6 +940,7 @@ if menu_selecionado == "Simulador Individual":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa:
+        st.subheader("Cálculo de Salário a partir da Contribuição")
         
         contrib_input_str = st.text_input("Digite a Contribuição Alvo (R$):", value="0,00", key="contrib_reversa")
         contrib_input = converter_br(contrib_input_str)
@@ -973,13 +975,13 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
     univali_tipo = "Normal"
     idade_ou_tempo_input = 30
     faixa_opcao_selecionada = "Faixa 1"
-    categoria_participante = "Migrante" # Fallback Default para Autopatrocínio
 
     if plano_selecionado == "UNIVALIPrevidencia":
         univali_migrante = "Não Migrante"
         univali_tipo = "Normal"
         idade_ou_tempo_input = 10
         st.info("Para o Autopatrocínio, o plano UNIVALI utiliza a regra fixa de categoria 'Não Migrante - Normal' com contrapartida integral (100%).")
+        categoria_participante = "Não Migrante"
     
     elif plano_selecionado == "FIEP":
         st.markdown("**Selecione a Faixa Etária:**")
@@ -1001,9 +1003,19 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         else:
             data_nasc = st.date_input("Data de Nascimento:", value=date(1996, 1, 1), min_value=date(1920, 1, 1), max_value=date.today(), format="DD/MM/YYYY", key="data_nasc_auto")
             hoje = date.today()
-            idade_calc = hoje.year - data_nasc.year - ((hoje.month,hoje.day) < (data_nasc.month, data_nasc.day))
+            idade_calc = hoje.year - data_nasc.year - ((hoje.month, hoje.day) < (data_nasc.month, data_nasc.day))
             st.info(f"Idade calculada: **{idade_calc} anos**")
             idade_ou_tempo_input = idade_calc
+        categoria_participante = "Migrante"
+            
+    else:
+        st.markdown("**Selecione a Categoria de Participação:**")
+        if plano_selecionado in planos_com_risco:
+            opcoes_cat = ["Migrante (Sem Risco)", "Migrante (Com Risco)", "Não Migrante (Sem Risco)", "Não Migrante (Com Risco)"]
+        else:
+            opcoes_cat = ["Migrante", "Não Migrante"]
+            
+        categoria_participante = st.radio("Categoria:", opcoes_cat, horizontal=True, label_visibility="collapsed", key="cat_auto_geral")
         
     if plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
@@ -1032,9 +1044,10 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 
     st.divider()
 
-    aba_normal_auto, aba_reversa_auto = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
+    aba_normal_auto, aba_reversa_auto = st.tabs(["📊 Cálculo da Cobrança", "🔍 Cálculo de Salário"])
 
     with aba_normal_auto:
+        st.subheader("Calcular Cobrança a partir do Salário")
         
         salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_auto")
         salario_input = converter_br(salario_input_str)
@@ -1055,14 +1068,13 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
             st.info(f"A UP atual adotada para o plano {plano_selecionado} é de R$ {formatar_br(plano_dados['up'])}")
             
-        if st.button("Gerar cálculo", type="primary"):
+        if st.button("Gerar Cálculo de Cobrança", type="primary"):
             if salario_input > 0:
                 tx_adm_plano = plano_dados.get("tx_adm", 0.0)
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
                 
-                # Se for PREVFIEPA/PREVIFIEA e escolheu sem risco, desativa o risco interno
-                if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"] and "Sem Risco" in categoria_participante:
+                if "Sem Risco" in categoria_participante:
                     tem_risco = False
                     tx_risco_plano = 0.0
                 
@@ -1124,7 +1136,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
                     taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
                     
-                    # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
                     valor_risco = arredondar((contrib_pura - taxa_adm_total) * tx_risco_plano) if tem_risco else 0.0
                     
                     contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
@@ -1294,18 +1305,19 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
                     
                     st.markdown("### Composição do Boleto")
-                    col_b1, col_b2, col_b3 = st.columns(3)
+                    col_b1, col_b2, col_b3, col_b4 = st.columns(4)
                     col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                     col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     
                     if tx_adm_plano > 0:
-                        col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                     else:
-                        col_b3.metric("Taxa Administração", "0% (Não config.)")
+                        col_b3.metric("Taxa Adm", "0%")
                         
                     if tem_risco:
-                        st.markdown("#### Detalhamento de Risco")
-                        st.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
+                        col_b4.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
+                    else:
+                        col_b4.metric("Taxa Risco", "Sem Risco")
                 
             else:
                 st.warning("Insira um salário válido.")
@@ -1328,7 +1340,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
                 
-                if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"] and "Sem Risco" in categoria_participante:
+                if "Sem Risco" in categoria_participante:
                     tem_risco = False
                     tx_risco_plano = 0.0
                 
@@ -1392,7 +1404,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
                         taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
                         
-                        # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
                         valor_risco = arredondar((contrib_pura - taxa_adm_total) * tx_risco_plano) if tem_risco else 0.0
                         
                         contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
@@ -1549,18 +1560,19 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
                         
                         st.markdown("### Composição do Boleto")
-                        col_b1, col_b2, col_b3 = st.columns(3)
+                        col_b1, col_b2, col_b3, col_b4 = st.columns(4)
                         col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                         col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         
                         if tx_adm_plano > 0:
-                            col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                            col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                         else:
-                            col_b3.metric("Taxa Administração", "0% (Não config.)")
+                            col_b3.metric("Taxa Adm", "0%")
                             
                         if tem_risco:
-                            st.markdown("#### Detalhamento de Risco")
-                            st.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
+                            col_b4.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
+                        else:
+                            col_b4.metric("Taxa Risco", "Sem Risco")
                 else:
                     st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas.")
             else:
@@ -1760,7 +1772,7 @@ elif menu_selecionado == "Regras e bases de cálculo":
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
     dados_tabela = [
-        {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima) - Taxa Adm total = (Participante + Patrocinadora) * 2,18%. Risco não gera taxa adm."},
+        {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima) - Taxa Adm = 2,18% sobre a Contribuição de Risco e Sem Risco separadas."},
         {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Faixas: 3% (Até 8,5 UR) | 7,5% (Acima). Patrocinadora aporta 50% (< 40 anos) ou 100% (>= 40 anos)."},
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto Superávit (7,28%). Taxa Adm = 2,18% sobre o dobro da cota pura. Aporte da Patrocinadora deduz a taxa adm."},
