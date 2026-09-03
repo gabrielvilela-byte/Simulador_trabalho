@@ -22,7 +22,7 @@ pv.aplicar("capa" if menu_selecionado in ('home', 'menu') else "interna")
 # 2. BANCO DE DADOS DOS PLANOS E ALIASES
 # =================================================================
 planos = {
-    "FIESCPREV": {"ur": 716.84, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tx_adm": 0.0218, "tx_risco": 0.0034, "tipo": "faixas"},
+    "FIESCPREV": {"ur": 716.84, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tx_adm": 0.0218, "tx_risco": 0.0034, "tipo": "faixas", "base_adm_com_risco": True},
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "SENACPREV": {"ur": 734.75, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tx_adm": 0.0218, "tx_risco": 0.0012, "tx_risco_auto": 0.0024, "tipo": "faixas"},
     "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_triplas_senai"},
@@ -51,7 +51,8 @@ apelidos_planilha = {
     "FIEA": "PREVIFIEA"
 }
 
-planos_com_risco = ["FIESCPREV", "SESC SC (SESCPREV)", "PREVISC SENAI-MA", "SENACPREV"]
+# PREVFIEPA e PREVIFIEA inseridos na lista para gerar os botões "Com Risco/Sem Risco"
+planos_com_risco = ["FIESCPREV", "SESC SC (SESCPREV)", "PREVISC SENAI-MA", "SENACPREV", "PREVFIEPA", "PREVIFIEA"]
 
 # =================================================================
 # 3. MOTORES MATEMÁTICOS E FORMATAÇÃO
@@ -532,7 +533,7 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         contrib_patr = contrib_pura
         return arredondar(contrib_pura + contrib_patr + taxa_adm)
         
-    elif plano_nome in ["PREVFIEPA", "PREVIFIEA", "UNERJPREV"]:
+    elif plano_nome == "UNERJPREV":
         return arredondar(contrib_pura * 2)
 
     elif plano_nome == "LUNELLIPREV":
@@ -551,6 +552,11 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         taxa_adm_part = arredondar(contrib_pura * tx_adm)
         taxa_adm_patroc = arredondar(contrib_patr * tx_adm)
         taxa_adm_total = arredondar(taxa_adm_part + taxa_adm_patroc)
+        return arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
+
+    elif plano_nome in ["PREVFIEPA", "PREVIFIEA"]:
+        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm)
+        contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
         return arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
 
     # Default Fallback (FIESCPREV, SENACPREV, FECOMERCIO, etc.)
@@ -781,7 +787,7 @@ if menu_selecionado == "Simulador Individual":
                     col_f3.metric("Faixa Topo (Excedente)", f"R$ {formatar_br(f3)}")
                 elif plano_selecionado == "SESC SC (SESCPREV)":
                     st.success(f"### Contribuição Sugerida (Participante): R$ {formatar_br(total)}")
-                    st.info("Cálculo realizado via fator de Parcela a Deduzir (como INSS).")
+                    st.info("Cálculo realizado via fator de Parcela a Deduzir.")
                     if f3 > 0:
                         col_f1, col_f2, col_f3 = st.columns(3)
                         col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
@@ -845,6 +851,11 @@ if menu_selecionado == "Simulador Individual":
                     c_patr_bruta = arredondar(total + superavit)
                     taxa_adm_total = arredondar((c_patr_bruta * 2) * tx_adm_plano)
                     c_patr_exibir = arredondar(total - taxa_adm_total)
+
+                elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
+                    c_patr_bruta = arredondar(total + superavit)
+                    taxa_adm_total = arredondar((c_patr_bruta * 2) * tx_adm_plano)
+                    c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
 
                 else:
                     if plano_dados.get("tipo") == "sesi_piprev_deducao":
@@ -957,6 +968,10 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
     elif plano_selecionado == "FIEMTPREV":
         categoria_participante = "Não Migrante"
         
+    elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
+        st.markdown("**Selecione a Categoria de Participação:**")
+        categoria_participante = st.radio("Categoria:", ["Migrante (Com Risco)", "Sem Risco"], horizontal=True, label_visibility="collapsed", key="cat_auto_fiepa")
+        
     elif plano_dados.get("tipo") == "unerjprev_idade":
         st.markdown("**Forma de preenchimento da Idade:**")
         modo_idade = st.radio("Selecione:", ["Digitar a Idade", "Data de Nascimento"], horizontal=True, label_visibility="collapsed", key="modo_idade_auto")
@@ -970,7 +985,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
             st.info(f"Idade calculada: **{idade_calc} anos**")
             idade_ou_tempo_input = idade_calc
         
-    elif plano_selecionado == "PREVISC SENAI-MA":
+    if plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
         **Escolha a faixa de contribuição desejada:**
         | Faixa | Salários até R$ 2.907,14 | Salários entre R$ 2.907,14 e R$ 5.000,00 | Salários acima de R$ 5.000,00 |
@@ -1025,6 +1040,11 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 tx_adm_plano = plano_dados.get("tx_adm", 0.0)
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
+                
+                # Se for PREVFIEPA/PREVIFIEA e escolheu sem risco, desativa o risco interno
+                if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"] and "Sem Risco" in categoria_participante:
+                    tem_risco = False
+                    tx_risco_plano = 0.0
                 
                 contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida_auto, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada, is_autopatrocinio=True)
                 
@@ -1081,38 +1101,63 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
 
-                elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA", "UNERJPREV"]:
+                elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
+                    valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
+                    taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                    contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
+                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
+                    
+                    st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
+                    
+                    st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    col_f1.metric("Faixa Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
+                    col_f2.metric("Faixas Intermédias", f"R$ {formatar_br(f2)}")
+                    col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
+                    
+                    st.markdown("### Composição do Boleto")
+                    col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+                    col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                    col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
+                    
+                    if tx_adm_plano > 0:
+                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                    else:
+                        col_b3.metric("Taxa Adm", "0% (Não config.)")
+                        
+                    if tem_risco:
+                        if tx_risco_plano > 0:
+                            col_b4.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
+                        else:
+                            col_b4.metric("Taxa Risco", "Sem Risco")
+                    else:
+                        col_b4.metric("Taxa Risco", "Sem Risco")
+
+                elif plano_selecionado == "UNERJPREV":
                     contrib_patr = contrib_pura
                     total_cobranca = arredondar(contrib_pura + contrib_patr)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
                     
                     st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
-                    if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
-                        col_f1, col_f2, col_f3 = st.columns(3)
-                        col_f1.metric("Faixa Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
-                        col_f2.metric("Faixas Intermédias", f"R$ {formatar_br(f2)}")
-                        col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
-                    else: # UNERJPREV
-                        col_f1, col_f2 = st.columns(2)
-                        teto_inss = plano_dados["ur"]
-                        if salario_input <= teto_inss:
-                            aliq_show = plano_dados["aliq_1"] * 100
-                        else:
-                            if idade_ou_tempo_input <= 44: aliq_show = 3.0
-                            elif 45 <= idade_ou_tempo_input <= 49: aliq_show = 4.0
-                            elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
-                            else: aliq_show = 6.0
-                        col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
-                        col_f2.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(contrib_pura)}")
+                    col_f1, col_f2 = st.columns(2)
+                    teto_inss = plano_dados["ur"]
+                    if salario_input <= teto_inss:
+                        aliq_show = plano_dados["aliq_1"] * 100
+                    else:
+                        if idade_ou_tempo_input <= 44: aliq_show = 3.0
+                        elif 45 <= idade_ou_tempo_input <= 49: aliq_show = 4.0
+                        elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
+                        else: aliq_show = 6.0
+                    col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
+                    col_f2.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(contrib_pura)}")
                     
                     st.markdown("### Composição do Boleto")
                     col_b1, col_b2, col_b3 = st.columns(3)
                     col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
                     col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     col_b3.metric("Taxas (Adm/Risco)", "Isento no Boleto*")
-                    if plano_selecionado == "UNERJPREV":
-                        st.caption("*A taxa administrativa é cobrada diretamente do saldo/patrimônio (0,85% a.a.).")
+                    st.caption("*A taxa administrativa é cobrada diretamente do saldo/patrimônio (0,85% a.a.).")
 
                 elif plano_selecionado == "LUNELLIPREV":
                     contrib_patr = arredondar(contrib_pura * 0.10)
@@ -1167,6 +1212,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     contrib_patr = 0.0
                     valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
                     taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
+                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
                     
@@ -1259,6 +1305,10 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
                 tem_risco = plano_selecionado in planos_com_risco
                 
+                if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"] and "Sem Risco" in categoria_participante:
+                    tem_risco = False
+                    tx_risco_plano = 0.0
+                
                 if tx_adm_plano == 0.0 and tx_risco_plano == 0.0 and plano_selecionado not in ["FIEMTPREV", "PREVFIEPA", "PREVIFIEA", "LUNELLIPREV", "UNERJPREV"]:
                     st.warning("⚠️ Atenção: As taxas de administração e risco deste plano não estão cadastradas no sistema.")
                 
@@ -1316,29 +1366,54 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
 
-                    elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA", "UNERJPREV"]:
+                    elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
+                        valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
+                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                        contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
+                        
+                        st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
+                        
+                        st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
+                        col_f1, col_f2, col_f3 = st.columns(3)
+                        col_f1.metric("Faixa Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Faixas Intermédias", f"R$ {formatar_br(f2)}")
+                        col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
+                        
+                        st.markdown("### Composição do Boleto")
+                        col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+                        col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                        col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
+                        
+                        if tx_adm_plano > 0:
+                            col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                        else:
+                            col_b3.metric("Taxa Adm", "0% (Não config.)")
+                            
+                        if tem_risco:
+                            if tx_risco_plano > 0:
+                                col_b4.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
+                            else:
+                                col_b4.metric("Taxa Risco", "Sem Risco")
+                        else:
+                            col_b4.metric("Taxa Risco", "Sem Risco")
+
+                    elif plano_selecionado == "UNERJPREV":
                         contrib_patr = contrib_pura
                         
                         st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
                         
                         st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
-                        if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
-                            col_f1, col_f2, col_f3 = st.columns(3)
-                            col_f1.metric("Faixa Base (Até 0,5 UP)", f"R$ {formatar_br(f1)}")
-                            col_f2.metric("Faixas Intermédias", f"R$ {formatar_br(f2)}")
-                            col_f3.metric("Faixa Topo (> 3 UPs)", f"R$ {formatar_br(f3)}")
-                        else: # UNERJPREV
-                            col_f1, col_f2 = st.columns(2)
-                            teto_inss = plano_dados["ur"]
-                            if salario_encontrado <= teto_inss:
-                                aliq_show = plano_dados["aliq_1"] * 100
-                            else:
-                                if idade_ou_tempo_input <= 44: aliq_show = 3.0
-                                elif 45 <= idade_ou_tempo_input <= 49: aliq_show = 4.0
-                                elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
-                                else: aliq_show = 6.0
-                            col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
-                            col_f2.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(contrib_pura)}")
+                        col_f1, col_f2 = st.columns(2)
+                        teto_inss = plano_dados["ur"]
+                        if salario_encontrado <= teto_inss:
+                            aliq_show = plano_dados["aliq_1"] * 100
+                        else:
+                            if idade_ou_tempo_input <= 44: aliq_show = 3.0
+                            elif 45 <= idade_ou_tempo_input <= 49: aliq_show = 4.0
+                            elif 50 <= idade_ou_tempo_input <= 54: aliq_show = 5.0
+                            else: aliq_show = 6.0
+                        col_f1.metric("Alíquota Aplicada (Base Inteira)", f"{formatar_br(aliq_show)}%")
+                        col_f2.metric("Contribuição Pura (Participante)", f"R$ {formatar_br(contrib_pura)}")
                         
                         st.markdown("### Composição do Boleto")
                         col_b1, col_b2, col_b3 = st.columns(3)
@@ -1659,19 +1734,19 @@ elif menu_selecionado == "Regras e bases de cálculo":
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
     dados_tabela = [
-        {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima) - [Taxa Adm não incide sobre o risco]"},
+        {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima) - Taxa Adm total = (Participante + Patrocinadora) * 2,18%. Risco não gera taxa adm."},
         {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Faixas: 3% (Até 8,5 UR) | 7,5% (Acima). Patrocinadora aporta 50% (< 40 anos) ou 100% (>= 40 anos)."},
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
-        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit nos Ativos (7,28%) - Taxa Adm: 2,18% (Descontada do aporte da Patrocinadora na regra do duplo)"},
+        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto Superávit (7,28%). Taxa Adm = 2,18% sobre o dobro da cota pura. Aporte da Patrocinadora deduz a taxa adm."},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.907,14 e R$ 5.000,00)"},
-        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
+        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm e Risco englobados na contribuição da Patrocinadora (deduzidos do repasse líquido)."},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%. O participante assume a regra integral como Não Migrante."},
         {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18% - Contrapartida: 50% (< 10 anos) ou 100% (>= 10 anos) da sugerida, zera se Tempo >= 35 (Não Migrante) ou >= 30 (Migrante)."},
-        {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fórmula Direta c/ Parcela a Deduzir: (Salário * 13,7741%) - (SP * 12,2124%). Taxa Adm: 2,18% (Descontada do aporte da Patrocinadora)"},
+        {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fórmula Direta c/ Parcela a Deduzir: (Salário * 13,7741%) - (SP * 12,2124%). Taxa Adm: 2,18% (Descontada do aporte da Patrocinadora)."},
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "UR", "Valor (R$)": "922,63", "Regra de Cálculo": "Faixas de Dedução dinâmicas (Até 10 URs | 10 a 11.4288 URs | Acima). Taxa Adm: 2,18%. Risco opcional: 0,12%."},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
-        {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "8.258,59", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
+        {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "8.258,59", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm e Risco englobados na contribuição da Patrocinadora (deduzidos do repasse líquido)."},
         {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo sobre a Base Total conforme a idade."},
         {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
     ]
