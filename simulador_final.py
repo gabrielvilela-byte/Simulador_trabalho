@@ -51,6 +51,7 @@ apelidos_planilha = {
     "FIEA": "PREVIFIEA"
 }
 
+# PREVFIEPA e PREVIFIEA inseridos na lista para gerar os botões "Com Risco/Sem Risco"
 planos_com_risco = ["FIESCPREV", "SESC SC (SESCPREV)", "PREVISC SENAI-MA", "SENACPREV", "PREVFIEPA", "PREVIFIEA"]
 
 # =================================================================
@@ -560,8 +561,7 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         return arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
 
     elif plano_nome in ["PREVFIEPA", "PREVIFIEA"]:
-        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm)
-        # O risco é calculado sobre a contribuição do patrocinador já deduzida da taxa de carregamento
+        taxa_adm_total = arredondar(contrib_pura * tx_adm)
         valor_risco = arredondar((contrib_pura - taxa_adm_total) * tx_risco) if tem_risco else 0.0
         contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
         return arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
@@ -868,9 +868,9 @@ if menu_selecionado == "Simulador Individual":
 
                 elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
                     c_patr_bruta = arredondar(total + superavit)
-                    taxa_adm_total = arredondar((c_patr_bruta * 2) * tx_adm_plano)
+                    taxa_adm_total = arredondar(c_patr_bruta * tx_adm_plano)
                     
-                    # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
+                    # Risco incide sobre a contribuição da patrocinadora deduzida da taxa administrativa
                     valor_risco = arredondar((c_patr_bruta - taxa_adm_total) * tx_risco_plano) if tem_risco_escolhido else 0.0
                     
                     c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
@@ -920,6 +920,8 @@ if menu_selecionado == "Simulador Individual":
                         col_p2.metric("Taxa Adm Total (Proporcional)", f"R$ {formatar_br(taxa_adm_total)}")
                     elif plano_selecionado == "SENAI-PIPREV":
                         col_p2.metric(f"Taxa Adm Total ({formatar_br(tx_adm_plano*100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                    elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
+                        col_p2.metric(f"Taxa Adm Total ({formatar_br(tx_adm_plano*100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                     else:
                         col_p2.metric(f"Taxa Adm Total ({formatar_br(tx_adm_plano*100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
                 else:
@@ -999,7 +1001,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         else:
             data_nasc = st.date_input("Data de Nascimento:", value=date(1996, 1, 1), min_value=date(1920, 1, 1), max_value=date.today(), format="DD/MM/YYYY", key="data_nasc_auto")
             hoje = date.today()
-            idade_calc = hoje.year - data_nasc.year - ((hoje.month, hoje.day) < (data_nasc.month, data_nasc.day))
+            idade_calc = hoje.year - data_nasc.year - ((hoje.month,hoje.day) < (data_nasc.month, data_nasc.day))
             st.info(f"Idade calculada: **{idade_calc} anos**")
             idade_ou_tempo_input = idade_calc
         
@@ -1120,7 +1122,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
 
                 elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
-                    taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                    taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
                     
                     # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
                     valor_risco = arredondar((contrib_pura - taxa_adm_total) * tx_risco_plano) if tem_risco else 0.0
@@ -1142,7 +1144,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     
                     if tx_adm_plano > 0:
-                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                     else:
                         col_b3.metric("Taxa Adm", "0% (Não config.)")
                         
@@ -1388,7 +1390,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
 
                     elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
-                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                        taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
                         
                         # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
                         valor_risco = arredondar((contrib_pura - taxa_adm_total) * tx_risco_plano) if tem_risco else 0.0
@@ -1409,7 +1411,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         
                         if tx_adm_plano > 0:
-                            col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                            col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                         else:
                             col_b3.metric("Taxa Adm", "0% (Não config.)")
                             
@@ -1763,14 +1765,14 @@ elif menu_selecionado == "Regras e bases de cálculo":
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto Superávit (7,28%). Taxa Adm = 2,18% sobre o dobro da cota pura. Aporte da Patrocinadora deduz a taxa adm."},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.907,14 e R$ 5.000,00)"},
-        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm (4%) e Risco (2,35%) englobados na contribuição da Patrocinadora. Risco = (Patrocinadora - Adm) * 2,35%."},
+        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm (4%) aplicada sobre a Patrocinadora. Risco (2,35%) aplicado sobre (Patrocinadora - Adm)."},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%. O participante assume a regra integral como Não Migrante."},
         {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18% - Contrapartida: 50% (< 10 anos) ou 100% (>= 10 anos) da sugerida, zera se Tempo >= 35 (Não Migrante) ou >= 30 (Migrante)."},
         {"Plano": "SESI-PIPREV", "Indexador": "SP", "Valor (R$)": "6.812,53", "Regra de Cálculo": "Fórmula Direta c/ Parcela a Deduzir: (Salário * 13,7741%) - (SP * 12,2124%). Taxa Adm: 2,18% (Descontada do aporte da Patrocinadora)."},
         {"Plano": "SESC SC (SESCPREV)", "Indexador": "UR", "Valor (R$)": "922,63", "Regra de Cálculo": "Faixas de Dedução dinâmicas (Até 10 URs | 10 a 11.4288 URs | Acima). Taxa Adm: 2,18%. Risco opcional: 0,12%."},
         {"Plano": "LUNELLIPREV", "Indexador": "Salário", "Valor (R$)": "-", "Regra de Cálculo": "Livre Escolha (Mín. 1%). Patrocinadora: 10% da contrib. do participante. Taxa Adm: Isento no boleto (cobrado do saldo)."},
-        {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "8.258,59", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm e Risco englobados na contribuição da Patrocinadora. Risco = (Patrocinadora - Adm) * 2,35%."},
+        {"Plano": "PREVIFIEA", "Indexador": "UP", "Valor (R$)": "8.258,59", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm (4%) aplicada sobre a Patrocinadora. Risco (2,35%) aplicado sobre (Patrocinadora - Adm)."},
         {"Plano": "UNERJPREV", "Indexador": "INSS", "Valor (R$)": "8.475,55", "Regra de Cálculo": "Base Inteira Única: 0,25% (Até 1 Teto). Acima de 1 Teto aplica 3% a 6% retroativo sobre a Base Total conforme a idade."},
         {"Plano": "PREVITÊ", "Indexador": "-", "Valor (R$)": "-", "Regra de Cálculo": "Contribuição Fixa / Regulamento Fechado"}
     ]
