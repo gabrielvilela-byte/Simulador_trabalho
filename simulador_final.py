@@ -679,7 +679,7 @@ if menu_selecionado == "Simulador Individual":
     elif plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
         **Escolha a faixa de contribuição desejada:**
-        | Faixa | Salários até R$ 2.907,14 | Salários entre R$ 2.907,14 e R$ 5.000,00 | Salários acima de R$ 5.000,00 |
+        | Faixa | Salários até R$ 2.907,14 | Salários entre R$2.907,14 e R$5.000,00 | Salários acima de R$ 5.000,00 |
         |:---:|:---:|:---:|:---:|
         | **1** | 2,10% | 3,50% | 16,10% |
         | **2** | 1,80% | 3,00% | 13,80% |
@@ -840,6 +840,12 @@ if menu_selecionado == "Simulador Individual":
                         taxa_adm_total = arredondar(taxa_adm_part + taxa_adm_patroc)
                         
                         c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_patroc)
+                
+                elif plano_selecionado == "SENAI-PIPREV":
+                    c_patr_bruta = arredondar(total + superavit)
+                    taxa_adm_total = arredondar((c_patr_bruta * 2) * tx_adm_plano)
+                    c_patr_exibir = arredondar(total - taxa_adm_total)
+
                 else:
                     if plano_dados.get("tipo") == "sesi_piprev_deducao":
                         c_patr_bruta = f1
@@ -858,7 +864,7 @@ if menu_selecionado == "Simulador Individual":
                         c_patr_exibir = arredondar(c_patr_bruta * 0.10)
                     elif plano_selecionado == "UNERJPREV":
                         c_patr_exibir = c_patr_bruta
-                    elif plano_selecionado in ["SESI-PIPREV", "SENAI-PIPREV"]:
+                    elif plano_selecionado == "SESI-PIPREV":
                         c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_patroc)
                     else:
                         if "Não Migrante" in categoria_participante:
@@ -883,6 +889,8 @@ if menu_selecionado == "Simulador Individual":
                 elif tx_adm_plano > 0:
                     if plano_selecionado == "FIEP" and "Abaixo" in categoria_participante:
                         col_p2.metric("Taxa Adm Total (Proporcional)", f"R$ {formatar_br(taxa_adm_total)}")
+                    elif plano_selecionado == "SENAI-PIPREV":
+                        col_p2.metric(f"Taxa Adm Total ({formatar_br(tx_adm_plano*100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
                     else:
                         col_p2.metric(f"Taxa Adm Total ({formatar_br(tx_adm_plano*100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
                 else:
@@ -1159,7 +1167,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     contrib_patr = 0.0
                     valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
                     taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
-                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
                     
@@ -1181,7 +1188,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b2.metric("Contrib. Patrocinadora", "R$ 0,00")
                     col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                     col_b4.metric(f"Taxa Risco", f"R$ {formatar_br(valor_risco)}")
-                        
+
                 elif plano_selecionado == "FIEP":
                     contrib_patr = contrib_pura
                     if "Abaixo" in categoria_participante:
@@ -1204,7 +1211,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
                     else:
                         col_b3.metric("Taxa Administração", "0% (Não config.)")
-
+                        
                 else:
                     contrib_patr = contrib_pura
                     valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
@@ -1655,7 +1662,7 @@ elif menu_selecionado == "Regras e bases de cálculo":
         {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima) - [Taxa Adm não incide sobre o risco]"},
         {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Faixas: 3% (Até 8,5 UR) | 7,5% (Acima). Patrocinadora aporta 50% (< 40 anos) ou 100% (>= 40 anos)."},
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
-        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit nos Ativos (7,28%) - Taxa Adm: 2,18% (Descontada do aporte da Patrocinadora)"},
+        {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto de Superávit nos Ativos (7,28%) - Taxa Adm: 2,18% (Descontada do aporte da Patrocinadora na regra do duplo)"},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.907,14 e R$ 5.000,00)"},
         {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas): De 1,50% a 15,00% dependendo da opção escolhida pelo participante. Faixas em 0.5 UP, 1 UP e 3 UPs."},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
