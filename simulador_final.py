@@ -835,6 +835,7 @@ if menu_selecionado == "Simulador Individual":
                     c_patr_bruta = arredondar(total + superavit)
                     taxa_adm_total = arredondar(c_patr_bruta * tx_adm_plano)
                     
+                    # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
                     valor_risco = arredondar((c_patr_bruta - taxa_adm_total) * tx_risco_plano) if tem_risco_escolhido else 0.0
                     
                     c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
@@ -1317,6 +1318,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                             
                     else:
                         valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
+                        
                         if plano_dados.get("base_adm_com_risco", False):
                             valor_adm = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
                         else:
@@ -1349,7 +1351,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 # =================================================================
 # 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de contribuição em lote":
+elif menu_selecionado == "Cálculo de Contribuição em Lote":
     pv.titulo_pagina("📂 Cálculo de Contribuição em Lote")
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
@@ -1440,7 +1442,7 @@ elif menu_selecionado == "Cálculo de contribuição em lote":
 # =================================================================
 # 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de salário em lote":
+elif menu_selecionado == "Cálculo de Salário em Lote":
     pv.titulo_pagina("📂 Cálculo de Salário em Lote")
     st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
@@ -1483,7 +1485,7 @@ elif menu_selecionado == "Cálculo de salário em lote":
                 if plano_oficial in planos:
                     contribuicao_alvo = float(row.get("Cobrança Alvo", 0.0)) if "Cobrança Alvo" in df_lote_rev.columns and pd.notna(row.get("Cobrança Alvo")) else 0.0
                     idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
-                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote_rev.columns else 0.0
+                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote.columns else 0.0
                     aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
                     
                     univ_cat = str(row.get("Categoria (Opcional)", "Migrante")).strip() if "Categoria (Opcional)" in df_lote_rev.columns else "Migrante"
@@ -1534,7 +1536,7 @@ elif menu_selecionado == "Cálculo de salário em lote":
 # =================================================================
 # 8. TELA 4: REGRAS E BASES DE CÁLCULO
 # =================================================================
-elif menu_selecionado == "Regras e bases de cálculo":
+elif menu_selecionado == "Regras e Bases de Cálculo":
     pv.titulo_pagina("📖 Regras e Bases de Cálculo")
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
