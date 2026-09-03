@@ -510,14 +510,9 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         taxa_adm_total = arredondar((contrib_pura + contrib_patr) * tx_adm)
         return arredondar(contrib_pura + contrib_patr + taxa_adm_total)
 
-    if plano_nome in ["FIEMTPREV", "SENAI-PIPREV"]:
+    elif plano_nome in ["FIEMTPREV", "SENAI-PIPREV", "SESI-PIPREV"]:
         taxa_adm = arredondar((contrib_pura * 2) * tx_adm)
         contrib_patr = arredondar(contrib_pura - taxa_adm)
-        return arredondar(contrib_pura + contrib_patr + taxa_adm)
-        
-    elif plano_nome == "SESI-PIPREV":
-        taxa_adm = arredondar((contrib_pura * 2) * tx_adm)
-        contrib_patr = contrib_pura
         return arredondar(contrib_pura + contrib_patr + taxa_adm)
         
     elif plano_nome in ["PREVFIEPA", "PREVIFIEA", "UNERJPREV"]:
@@ -659,7 +654,7 @@ if menu_selecionado == "Simulador Individual":
     elif plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
         **Escolha a faixa de contribuição desejada:**
-        | Faixa | Salários até R$ 2.907,14 | Salários entre R$2.907,14 e R$5.000,00 | Salários acima de R$ 5.000,00 |
+        | Faixa | Salários até R$ 2.907,14 | Salários entre R$ 2.907,14 e R$ 5.000,00 | Salários acima de R$ 5.000,00 |
         |:---:|:---:|:---:|:---:|
         | **1** | 2,10% | 3,50% | 16,10% |
         | **2** | 1,80% | 3,00% | 13,80% |
@@ -682,10 +677,9 @@ if menu_selecionado == "Simulador Individual":
         faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key=f"faixa_{plano_selecionado}_ativo")
 
     st.divider()
-    aba_normal, aba_reversa = st.tabs(["📊 Cálculo de Contribuição", "🔍 Cálculo de Salário"])
+    aba_normal, aba_reversa = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
 
     with aba_normal:
-        st.subheader("Calcular Contribuição")
         
         salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_normal")
         salario_input = converter_br(salario_input_str)
@@ -715,7 +709,7 @@ if menu_selecionado == "Simulador Individual":
         if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
             st.info(f"A UP atual adotada para o plano {plano_selecionado} é de R$ {formatar_br(plano_dados['up'])}")
         
-        if st.button("Gerar Cálculo", type="primary"):
+        if st.button("Gerar cálculo", type="primary"):
             if salario_input > 0:
                 total, f1, f2, f3, superavit = calcular_contribuicao(plano_selecionado, salario_input, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada)
                 
@@ -835,7 +829,6 @@ if menu_selecionado == "Simulador Individual":
                     c_patr_bruta = arredondar(total + superavit)
                     taxa_adm_total = arredondar(c_patr_bruta * tx_adm_plano)
                     
-                    # Correção: O risco é calculado sobre a contribuição da patrocinadora deduzida da taxa de adm.
                     valor_risco = arredondar((c_patr_bruta - taxa_adm_total) * tx_risco_plano) if tem_risco_escolhido else 0.0
                     
                     c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
@@ -904,7 +897,6 @@ if menu_selecionado == "Simulador Individual":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa:
-        st.subheader("Cálculo de Salário a partir da Contribuição")
         
         contrib_input_str = st.text_input("Digite a Contribuição Alvo (R$):", value="0,00", key="contrib_reversa")
         contrib_input = converter_br(contrib_input_str)
@@ -928,7 +920,7 @@ if menu_selecionado == "Simulador Individual":
 # -----------------------------------------------------------------
 # 5.2 TELA: SIMULADOR AUTOPATROCÍNIO
 # -----------------------------------------------------------------
-elif menu_selecionado == "Simulador de Autopatrocínio":
+elif menu_selecionado == "Simulador de autopatrocínio":
     pv.titulo_pagina("👤 Simulador de Autopatrocínio")
     st.write("Verifique a cobrança a partir do salário ou faça o cálculo reverso (Gross-up) a partir do valor desejado da cobrança mensal.")
 
@@ -986,10 +978,9 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 
     st.divider()
 
-    aba_normal_auto, aba_reversa_auto = st.tabs(["📊 Cálculo da Cobrança", "🔍 Cálculo de Salário"])
+    aba_normal_auto, aba_reversa_auto = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
 
     with aba_normal_auto:
-        st.subheader("Calcular Cobrança a partir do Salário")
         
         salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_auto")
         salario_input = converter_br(salario_input_str)
@@ -1010,7 +1001,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
             st.info(f"A UP atual adotada para o plano {plano_selecionado} é de R$ {formatar_br(plano_dados['up'])}")
             
-        if st.button("Gerar Cálculo de Cobrança", type="primary"):
+        if st.button("Gerar cálculo", type="primary"):
             if salario_input > 0:
                 tx_adm_plano = plano_dados.get("tx_adm", 0.0)
                 tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0))
@@ -1037,21 +1028,9 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     col_b3.metric("Taxa Adm Total", f"R$ {formatar_br(taxa_adm_total)}")
 
-                elif plano_selecionado in ["FIEMTPREV", "SENAI-PIPREV"]:
+                elif plano_selecionado in ["FIEMTPREV", "SENAI-PIPREV", "SESI-PIPREV"]:
                     taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
                     contrib_patr = arredondar(contrib_pura - taxa_adm_total)
-                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total)
-                    
-                    st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
-                    st.markdown("### Composição do Boleto")
-                    col_b1, col_b2, col_b3 = st.columns(3)
-                    col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
-                    col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
-                    col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
-                    
-                elif plano_selecionado == "SESI-PIPREV":
-                    taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
-                    contrib_patr = contrib_pura
                     total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
@@ -1143,34 +1122,60 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     else:
                         col_b3.metric("Taxa Risco", "Sem Risco")
                         
+                elif plano_selecionado == "SESC SC (SESCPREV)":
+                    contrib_patr = 0.0
+                    valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
+                    taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
+                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
+                    
+                    st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
+                    
+                    st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
+                    st.info("Cálculo realizado via fator de Parcela a Deduzir (como INSS).")
+                    if f3 > 0:
+                        col_f1, col_f2, col_f3 = st.columns(3)
+                        col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
+                        col_f3.metric("Diferença Faixa 3", f"R$ {formatar_br(f3)}")
+                    elif f2 > 0:
+                        col_f1, col_f2 = st.columns(2)
+                        col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
+                        col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
+                        
+                    st.markdown("### Composição do Boleto")
+                    col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+                    col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                    col_b2.metric("Contrib. Patrocinadora", "R$ 0,00")
+                    col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
+                    col_b4.metric(f"Taxa Risco", f"R$ {formatar_br(valor_risco)}")
+
                 else:
+                    contrib_patr = contrib_pura
                     valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
                     
                     if plano_dados.get("base_adm_com_risco", False):
-                        valor_adm = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
+                        valor_adm_base = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
+                        taxa_adm_total = arredondar(valor_adm_base * 2)
                     else:
-                        valor_adm = arredondar(contrib_pura * tx_adm_plano)
+                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
                     
-                    total_cobranca = arredondar(contrib_pura + valor_adm + valor_risco)
+                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
                     
                     st.markdown("### Composição do Boleto")
                     col_b1, col_b2, col_b3 = st.columns(3)
-                    col_b1.metric("Contribuição Pura", f"R$ {formatar_br(contrib_pura)}")
+                    col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                    col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                     
                     if tx_adm_plano > 0:
-                        col_b2.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(valor_adm)}")
+                        col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
                     else:
-                        col_b2.metric("Taxa Administração", "0% (Não config.)")
+                        col_b3.metric("Taxa Administração", "0% (Não config.)")
                         
                     if tem_risco:
-                        if tx_risco_plano > 0:
-                            col_b3.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
-                        else:
-                            col_b3.metric("Taxa Risco", "Sem Risco")
-                    else:
-                        col_b3.metric("Taxa Risco", "Sem Risco")
+                        st.markdown("#### Detalhamento de Risco")
+                        st.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
                 
             else:
                 st.warning("Insira um salário válido.")
@@ -1219,20 +1224,9 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxa Adm Total", f"R$ {formatar_br(taxa_adm_total)}")
 
-                    elif plano_selecionado in ["FIEMTPREV", "SENAI-PIPREV"]:
+                    elif plano_selecionado in ["FIEMTPREV", "SENAI-PIPREV", "SESI-PIPREV"]:
                         taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
                         contrib_patr = arredondar(contrib_pura - taxa_adm_total)
-                        
-                        st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
-                        st.markdown("### Composição do Boleto")
-                        col_b1, col_b2, col_b3 = st.columns(3)
-                        col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
-                        col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
-                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
-                        
-                    elif plano_selecionado == "SESI-PIPREV":
-                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
-                        contrib_patr = contrib_pura
                         
                         st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
                         st.markdown("### Composição do Boleto")
@@ -1316,32 +1310,56 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         else:
                             col_b3.metric("Taxa Risco", "Sem Risco")
                             
+                    elif plano_selecionado == "SESC SC (SESCPREV)":
+                        contrib_patr = 0.0
+                        valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
+                        taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
+                        
+                        st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
+                        
+                        st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
+                        if f3 > 0:
+                            col_f1, col_f2, col_f3 = st.columns(3)
+                            col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
+                            col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
+                            col_f3.metric("Diferença Faixa 3", f"R$ {formatar_br(f3)}")
+                        elif f2 > 0:
+                            col_f1, col_f2 = st.columns(2)
+                            col_f1.metric("Valor Base", f"R$ {formatar_br(f1)}")
+                            col_f2.metric("Diferença Faixa 2", f"R$ {formatar_br(f2)}")
+                            
+                        st.markdown("### Composição do Boleto")
+                        col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+                        col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                        col_b2.metric("Contrib. Patrocinadora", "R$ 0,00")
+                        col_b3.metric(f"Taxa Adm ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(taxa_adm_total)}")
+                        col_b4.metric(f"Taxa Risco", f"R$ {formatar_br(valor_risco)}")
+
                     else:
+                        contrib_patr = contrib_pura
                         valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
                         
                         if plano_dados.get("base_adm_com_risco", False):
-                            valor_adm = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
+                            valor_adm_base = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
+                            taxa_adm_total = arredondar(valor_adm_base * 2)
                         else:
-                            valor_adm = arredondar(contrib_pura * tx_adm_plano)
+                            taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
                         
                         st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
                         
                         st.markdown("### Composição do Boleto")
                         col_b1, col_b2, col_b3 = st.columns(3)
-                        col_b1.metric("Contribuição Pura", f"R$ {formatar_br(contrib_pura)}")
+                        col_b1.metric("Contrib. Participante", f"R$ {formatar_br(contrib_pura)}")
+                        col_b2.metric("Contrib. Patrocinadora", f"R$ {formatar_br(contrib_patr)}")
                         
                         if tx_adm_plano > 0:
-                            col_b2.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(valor_adm)}")
+                            col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
                         else:
-                            col_b2.metric("Taxa Administração", "0% (Não config.)")
+                            col_b3.metric("Taxa Administração", "0% (Não config.)")
                             
                         if tem_risco:
-                            if tx_risco_plano > 0:
-                                col_b3.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
-                            else:
-                                col_b3.metric("Taxa Risco", "Sem Risco")
-                        else:
-                            col_b3.metric("Taxa Risco", "Sem Risco")
+                            st.markdown("#### Detalhamento de Risco")
+                            st.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
                 else:
                     st.info("O cálculo de salário para este plano requer alinhamento de variáveis complexas.")
             else:
@@ -1351,7 +1369,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 # =================================================================
 # 6. TELA 2: CÁLCULO DE CONTRIBUIÇÃO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de Contribuição em Lote":
+elif menu_selecionado == "Cálculo de contribuição em lote":
     pv.titulo_pagina("📂 Cálculo de Contribuição em Lote")
     st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
     
@@ -1442,7 +1460,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
 # =================================================================
 # 7. TELA 3: CÁLCULO DE SALÁRIO EM LOTE
 # =================================================================
-elif menu_selecionado == "Cálculo de Salário em Lote":
+elif menu_selecionado == "Cálculo de salário em lote":
     pv.titulo_pagina("📂 Cálculo de Salário em Lote")
     st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
     
@@ -1485,7 +1503,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                 if plano_oficial in planos:
                     contribuicao_alvo = float(row.get("Cobrança Alvo", 0.0)) if "Cobrança Alvo" in df_lote_rev.columns and pd.notna(row.get("Cobrança Alvo")) else 0.0
                     idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
-                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote.columns else 0.0
+                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote_rev.columns else 0.0
                     aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
                     
                     univ_cat = str(row.get("Categoria (Opcional)", "Migrante")).strip() if "Categoria (Opcional)" in df_lote_rev.columns else "Migrante"
@@ -1536,7 +1554,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
 # =================================================================
 # 8. TELA 4: REGRAS E BASES DE CÁLCULO
 # =================================================================
-elif menu_selecionado == "Regras e Bases de Cálculo":
+elif menu_selecionado == "Regras e bases de cálculo":
     pv.titulo_pagina("📖 Regras e Bases de Cálculo")
     st.write("Consulte abaixo os indexadores atuais e a estrutura de cálculo configurada para cada plano de previdência no sistema.")
     
