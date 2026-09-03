@@ -27,7 +27,7 @@ planos = {
     "SENACPREV": {"ur": 734.75, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tx_adm": 0.0218, "tx_risco": 0.0012, "tx_risco_auto": 0.0024, "tipo": "faixas"},
     "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_triplas_senai"},
     "PREVISC SENAI-MA": {"teto1_rs": 2907.14, "teto2_rs": 5000.00, "tx_adm": 0.0235, "tx_risco": 0.0, "tipo": "faixas_triplas_fiema"},
-    "PREVFIEPA": {"up": 7740.09, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas_quadruplas_fiepa"},
+    "PREVFIEPA": {"up": 7740.09, "tx_adm": 0.04, "tx_risco": 0.0235, "tipo": "faixas_quadruplas_fiepa"},
     "FECOMERCIO": {"ur": 845.22, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.074, "tx_adm": 0.0, "tx_risco": 0.0, "tipo": "faixas"},
     "FIEMTPREV": {"ur": 715.77, "teto_urs": 12.06, "aliq_1": 0.020, "aliq_2": 0.0725, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "UNIVALIPrevidencia": {"ur": 627.19, "teto_urs": 8.0, "aliq_1": 0.030, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_univali"},
@@ -140,6 +140,7 @@ def calcular_contribuicao(plano_nome, salario, aliq_escolhida=None, univali_migr
         if is_autopatrocinio:
             return contrib_pura, contrib_pura, valor_adm, 0.0, 0.0
             
+        # Retorna o Líquido no índice 0 (Total), Pura no 1 (f1) e Valor_Adm no 2 (f2)
         return contrib_liquida, contrib_pura, valor_adm, 0.0, 0.0
     
     if tipo == "fixo":
@@ -499,6 +500,11 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
     tx_adm = plano.get("tx_adm", 0.0)
     tx_risco = plano.get("tx_risco_auto", plano.get("tx_risco", 0.0))
     tem_risco = plano_nome in planos_com_risco
+    
+    if plano_nome in ["PREVFIEPA", "PREVIFIEA"] and "Sem Risco" in categoria_participante:
+        tem_risco = False
+        tx_risco = 0.0
+
     valor_risco = arredondar(salario * tx_risco) if tem_risco else 0.0
     
     if plano_nome == "UNIVALIPrevidencia":
@@ -660,6 +666,9 @@ if menu_selecionado == "Simulador Individual":
     elif plano_selecionado == "FIEMTPREV":
         categoria_participante = "Não Migrante"
         st.info("Para o FIEMT, o cálculo adota a regra padrão de 'Não Migrante'.")
+    elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
+        st.markdown("**Selecione a Categoria de Participação:**")
+        categoria_participante = st.radio("Categoria:", ["Migrante (Com Risco)", "Sem Risco"], horizontal=True, label_visibility="collapsed", key="cat_ativo_fiepa")
     else:
         st.markdown("**Selecione a Categoria de Participação:**")
         if plano_selecionado in planos_com_risco:
@@ -821,6 +830,10 @@ if menu_selecionado == "Simulador Individual":
                 tx_risco_plano = plano_dados.get("tx_risco", 0.0)
                 
                 tem_risco_escolhido = "(Com Risco)" in categoria_participante
+                
+                if plano_selecionado in ["PREVFIEPA", "PREVIFIEA"] and "Sem Risco" in categoria_participante:
+                    tem_risco_escolhido = False
+
                 valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco_escolhido else 0.0
                 
                 if plano_selecionado == "UNIVALIPrevidencia":
@@ -1212,7 +1225,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     contrib_patr = 0.0
                     valor_risco = arredondar(salario_input * tx_risco_plano) if tem_risco else 0.0
                     taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
-                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
                     
@@ -1739,7 +1751,7 @@ elif menu_selecionado == "Regras e bases de cálculo":
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto Superávit (7,28%). Taxa Adm = 2,18% sobre o dobro da cota pura. Aporte da Patrocinadora deduz a taxa adm."},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.907,14 e R$ 5.000,00)"},
-        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm e Risco englobados na contribuição da Patrocinadora (deduzidos do repasse líquido)."},
+        {"Plano": "PREVFIEPA", "Indexador": "UP", "Valor (R$)": "7.740,09", "Regra de Cálculo": "Cascata de Múltiplas Faixas (6 Faixas). Taxa Adm (4%) e Risco (2,35%) englobados na contribuição da Patrocinadora (deduzidos do repasse líquido)."},
         {"Plano": "FECOMERCIO", "Indexador": "UR", "Valor (R$)": "845,22", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "FIEMTPREV", "Indexador": "UR", "Valor (R$)": "715,77", "Regra de Cálculo": "Faixas: 2% (Até 12,06 UR) | 7,25% (Acima) - Taxa Adm: 2,18%. O participante assume a regra integral como Não Migrante."},
         {"Plano": "UNIVALIPrevidencia", "Indexador": "UR", "Valor (R$)": "627,19", "Regra de Cálculo": "Faixa Fixa: 3% (Até 8 UR) | Excedente: 14% ou 17% variando por Categoria - Taxa Adm: 2,18% - Contrapartida: 50% (< 10 anos) ou 100% (>= 10 anos) da sugerida, zera se Tempo >= 35 (Não Migrante) ou >= 30 (Migrante)."},
