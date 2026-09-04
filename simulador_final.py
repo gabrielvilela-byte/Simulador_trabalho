@@ -842,7 +842,7 @@ if menu_selecionado == "Simulador Individual":
                             taxa_adm_part = arredondar(total * tx_adm_plano)
                             taxa_adm_patroc = arredondar(c_patr_bruta * tx_adm_plano)
                             taxa_adm_total = arredondar(taxa_adm_part + taxa_adm_patroc)
-                            c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_patroc)
+                            c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total)
                         else:
                             teto_rs = plano_dados["ur"] * plano_dados["teto_urs"]
                             sug_f1 = arredondar(salario_input * plano_dados["aliq_1"]) if salario_input <= teto_rs else arredondar(teto_rs * plano_dados["aliq_1"])
@@ -874,9 +874,7 @@ if menu_selecionado == "Simulador Individual":
                 elif plano_selecionado in ["PREVFIEPA", "PREVIFIEA"]:
                     c_patr_bruta = arredondar(total + superavit)
                     taxa_adm_total = arredondar(c_patr_bruta * tx_adm_plano)
-                    
                     valor_risco = arredondar((c_patr_bruta - taxa_adm_total) * tx_risco_plano) if tem_risco_escolhido else 0.0
-                    
                     c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
 
                 else:
@@ -1335,10 +1333,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                             col_b3.metric("Taxa Adm", "0% (Não config.)")
                             
                         if tem_risco:
-                            if tx_risco_plano > 0:
-                                col_b4.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
-                            else:
-                                col_b4.metric("Taxa Risco", "Sem Risco")
+                            col_b4.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
                         else:
                             col_b4.metric("Taxa Risco", "Sem Risco")
 
