@@ -683,7 +683,7 @@ if menu_selecionado == "Simulador Individual":
     elif plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
         **Escolha a faixa de contribuição desejada:**
-        | Faixa | Salários até R$ 2.521,45 | Salários entre R$ 2.521,45 e R$ 5.042,89 | Salários acima de R$ 5.042,89 |
+        | Faixa | Salários até R$ 2.521,45 | "Salários entre R$ 2.521,45 e R$ 5.042,89" | Salários acima de R$ 5.042,89 |
         |:---:|:---:|:---:|:---:|
         | **1** | 2,10% | 3,50% | 16,10% |
         | **2** | 1,80% | 3,00% | 13,80% |
