@@ -22,7 +22,7 @@ pv.aplicar("capa" if menu_selecionado in ('home', 'menu') else "interna")
 # 2. BANCO DE DADOS DOS PLANOS E ALIASES
 # =================================================================
 planos = {
-    "FIESCPREV": {"ur": 716.84, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tx_adm": 0.0218, "tx_risco": 0.0034, "tipo": "faixas", "base_adm_com_risco": True},
+    "FIESCPREV": {"ur": 716.84, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tx_adm": 0.0218, "tx_risco": 0.0034, "tipo": "faixas", "base_adm_com_risco": False},
     "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "SENACPREV": {"ur": 734.75, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tx_adm": 0.0218, "tx_risco": 0.0012, "tx_risco_auto": 0.0024, "tipo": "faixas"},
     "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_triplas_senai"},
@@ -683,7 +683,7 @@ if menu_selecionado == "Simulador Individual":
     elif plano_selecionado == "PREVISC SENAI-MA":
         st.markdown("""
         **Escolha a faixa de contribuição desejada:**
-        | Faixa | Salários até R$ 2.521,45 | Salários entre RS 2.521,45 e R$ 5.042,89 | Salários acima de R$ 5.042,89 |
+        | Faixa | Salários até R$ 2.521,45 | Salários entre R$ 2.521,45 e R$ 5.042,89 | Salários acima de R$ 5.042,89 |
         |:---:|:---:|:---:|:---:|
         | **1** | 2,10% | 3,50% | 16,10% |
         | **2** | 1,80% | 3,00% | 13,80% |
@@ -851,7 +851,7 @@ if menu_selecionado == "Simulador Individual":
                             taxa_adm_patroc = 0.0
                             taxa_adm_total = arredondar(taxa_adm_part + taxa_adm_patroc)
                             
-                            c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_patroc)
+                            c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total)
                 
                 elif plano_selecionado == "SENAI-PIPREV":
                     c_patr_bruta = arredondar(total + superavit)
@@ -1349,38 +1349,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b2.metric("Contrib. Patrocinadora (10%)", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxas (Adm)", "Isento no Boleto*")
                         
-                    elif plano_selecionado == "PREVISC SENAI-MA":
-                        valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
-                        if plano_dados.get("base_adm_com_risco", False):
-                            valor_adm = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
-                        else:
-                            valor_adm = arredondar(contrib_pura * tx_adm_plano)
-                        
-                        st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
-                        
-                        st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
-                        col_f1, col_f2, col_f3 = st.columns(3)
-                        col_f1.metric("Faixa Base (Até R$ 2.907,14)", f"R$ {formatar_br(f1)}")
-                        col_f2.metric("Faixa Intermediária (Até R$ 5.000,00)", f"R$ {formatar_br(f2)}")
-                        col_f3.metric("Faixa Topo (Excedente)", f"R$ {formatar_br(f3)}")
-                        
-                        st.markdown("### Composição do Boleto")
-                        col_b1, col_b2, col_b3 = st.columns(3)
-                        col_b1.metric("Contribuição Pura", f"R$ {formatar_br(contrib_pura)}")
-                        
-                        if tx_adm_plano > 0:
-                            col_b2.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(valor_adm)}")
-                        else:
-                            col_b2.metric("Taxa Administração", "0% (Não config.)")
-                            
-                        if tem_risco:
-                            if tx_risco_plano > 0:
-                                col_b3.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
-                            else:
-                                col_b3.metric("Taxa Risco", "Sem Risco")
-                        else:
-                            col_b3.metric("Taxa Risco", "Sem Risco")
-                            
                     elif plano_selecionado == "SESC SC (SESCPREV)":
                         contrib_patr = 0.0
                         valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
@@ -1494,23 +1462,33 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
         try:
             df_lote = pd.read_excel(arquivo_upload)
             
+            # Mapas para ignorar diferenças de maiúsculas/minúsculas
+            map_planos = {k.upper(): k for k in planos.keys()}
+            map_apelidos = {k.upper(): v for k, v in apelidos_planilha.items()}
+            
             resultados = []
             for idx, row in df_lote.iterrows():
-                plano_excel = str(row.get("Plano", "")).strip().upper()
-                plano_oficial = apelidos_planilha.get(plano_excel, str(row.get("Plano", "")).strip())
+                plano_input = str(row.get("Plano", "")).strip().upper()
+                plano_oficial = map_apelidos.get(plano_input, map_planos.get(plano_input, str(row.get("Plano", ""))))
                 
                 if plano_oficial in planos:
                     salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
                     idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
-                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote.columns else 0.0
-                    aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
+                    
+                    try:
+                        aliq_bruta = str(row.get("Aliquota Opcional % (Opcional)", "0")).replace(",", ".")
+                        aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and aliq_bruta.strip() not in ["", "-"] and float(aliq_bruta) > 0 else None
+                    except:
+                        aliq = None
                     
                     univ_cat = str(row.get("Categoria (Opcional)", "Migrante")).strip() if "Categoria (Opcional)" in df_lote.columns else "Migrante"
-                    # Compatibilidade com planilhas antigas
                     if "Univali Categoria (Opcional)" in df_lote.columns:
                         univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip()
                         
                     univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote.columns else "Normal"
+                    
+                    if univ_cat in ["", "-", "nan", "NaN"]: univ_cat = "Migrante"
+                    if univ_tipo in ["", "-", "nan", "NaN"]: univ_tipo = "Normal"
                     
                     faixa_val = "1"
                     if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
@@ -1585,22 +1563,32 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
         try:
             df_lote_rev = pd.read_excel(arquivo_upload_rev)
             
+            map_planos = {k.upper(): k for k in planos.keys()}
+            map_apelidos = {k.upper(): v for k, v in apelidos_planilha.items()}
+            
             resultados_rev = []
             for idx, row in df_lote_rev.iterrows():
-                plano_excel = str(row.get("Plano", "")).strip().upper()
-                plano_oficial = apelidos_planilha.get(plano_excel, str(row.get("Plano", "")).strip())
+                plano_input = str(row.get("Plano", "")).strip().upper()
+                plano_oficial = map_apelidos.get(plano_input, map_planos.get(plano_input, str(row.get("Plano", ""))))
                 
                 if plano_oficial in planos:
                     contribuicao_alvo = float(row.get("Cobrança Alvo", 0.0)) if "Cobrança Alvo" in df_lote_rev.columns and pd.notna(row.get("Cobrança Alvo")) else 0.0
                     idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
-                    aliq_bruta = row.get("Aliquota Opcional % (Opcional)", 0.0) if "Aliquota Opcional % (Opcional)" in df_lote_rev.columns else 0.0
-                    aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and float(aliq_bruta) > 0 else None
+                    
+                    try:
+                        aliq_bruta = str(row.get("Aliquota Opcional % (Opcional)", "0")).replace(",", ".")
+                        aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and aliq_bruta.strip() not in ["", "-"] and float(aliq_bruta) > 0 else None
+                    except:
+                        aliq = None
                     
                     univ_cat = str(row.get("Categoria (Opcional)", "Migrante")).strip() if "Categoria (Opcional)" in df_lote_rev.columns else "Migrante"
                     if "Univali Categoria (Opcional)" in df_lote_rev.columns:
                         univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip()
                         
                     univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote_rev.columns else "Normal"
+                    
+                    if univ_cat in ["", "-", "nan", "NaN"]: univ_cat = "Migrante"
+                    if univ_tipo in ["", "-", "nan", "NaN"]: univ_tipo = "Normal"
                     
                     faixa_val = "1"
                     if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
