@@ -1256,7 +1256,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     tx_risco_plano = 0.0
                 
                 if tx_adm_plano == 0.0 and tx_risco_plano == 0.0 and plano_selecionado not in ["FIEMTPREV", "PREVFIEPA", "PREVIFIEA", "LUNELLIPREV", "UNERJPREV"]:
-                    st.warning("⚠️ Atenção: As taxas de administration e risco deste plano não estão cadastradas no sistema.")
+                    st.warning("⚠️ Atenção: As taxas de administração e risco deste plano não estão cadastradas no sistema.")
                 
                 salario_encontrado = descobrir_salario_autopatrocinio(plano_selecionado, contrib_input, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada, categoria_participante)
                 
@@ -1514,6 +1514,7 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
                         aliq = None
                     
                     univ_cat = str(row.get("Categoria (Opcional)", "Migrante")).strip() if "Categoria (Opcional)" in df_lote.columns else "Migrante"
+                    # Compatibilidade com planilhas antigas
                     if "Univali Categoria (Opcional)" in df_lote.columns:
                         univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip()
                         
