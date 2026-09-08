@@ -1233,10 +1233,10 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 
     with aba_reversa_auto:
         
-        contrib_input_str = st.text_input("Digite a Contribuição Alvo (R$):", value="0,00", key="contrib_reversa_auto")
+        contrib_input_str = st.text_input("Digite o Valor do Boleto Mensal (R$):", value="0,00", key="contrib_reversa_auto")
         contrib_input = converter_br(contrib_input_str)
         
-        aliq_escolhida_rev = None
+        aliq_escolhida_auto_rev = None
         if plano_dados.get("tipo") in ["up_sem_teto", "lunelliprev"]:
             if plano_dados.get("tipo") == "up_sem_teto":
                 aliq_padrao_auto_rev = formatar_br(plano_dados["aliq_1"] * 100)
@@ -1349,38 +1349,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b2.metric("Contrib. Patrocinadora (10%)", f"R$ {formatar_br(contrib_patr)}")
                         col_b3.metric("Taxas (Adm)", "Isento no Boleto*")
                         
-                    elif plano_selecionado == "PREVISC SENAI-MA":
-                        valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
-                        if plano_dados.get("base_adm_com_risco", False):
-                            valor_adm = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
-                        else:
-                            valor_adm = arredondar(contrib_pura * tx_adm_plano)
-                        
-                        st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
-                        
-                        st.markdown("#### Detalhamento da Contribuição Equivalente (Participante)")
-                        col_f1, col_f2, col_f3 = st.columns(3)
-                        col_f1.metric("Faixa Base (Até R$ 2.521,45)", f"R$ {formatar_br(f1)}")
-                        col_f2.metric("Faixa Intermediária (Até R$ 5.042,89)", f"R$ {formatar_br(f2)}")
-                        col_f3.metric("Faixa Topo (Excedente)", f"R$ {formatar_br(f3)}")
-                        
-                        st.markdown("### Composição do Boleto")
-                        col_b1, col_b2, col_b3 = st.columns(3)
-                        col_b1.metric("Contribuição Pura", f"R$ {formatar_br(contrib_pura)}")
-                        
-                        if tx_adm_plano > 0:
-                            col_b2.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(valor_adm)}")
-                        else:
-                            col_b2.metric("Taxa Administração", "0% (Não config.)")
-                            
-                        if tem_risco:
-                            if tx_risco_plano > 0:
-                                col_b3.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
-                            else:
-                                col_b3.metric("Taxa Risco", "Sem Risco")
-                        else:
-                            col_b3.metric("Taxa Risco", "Sem Risco")
-                            
                     elif plano_selecionado == "SESC SC (SESCPREV)":
                         contrib_patr = 0.0
                         valor_risco = arredondar(salario_encontrado * tx_risco_plano) if tem_risco else 0.0
