@@ -510,7 +510,7 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         tx_risco = 0.0
 
     valor_risco = arredondar(salario * tx_risco) if tem_risco else 0.0
-
+    
     if plano_nome == "FIESCPREV":
         contrib_patr = 0.0
         taxa_adm_total = arredondar((contrib_pura + valor_risco) * tx_adm)
@@ -989,10 +989,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         univali_tipo = "Normal"
         idade_ou_tempo_input = 10
         st.info("Para o Autopatrocínio, o plano UNIVALI utiliza a regra fixa de categoria 'Não Migrante - Normal'.")
-    elif plano_selecionado == "FIEP":
-        st.markdown("**Selecione a Faixa Etária:**")
-        categoria_participante = st.radio("Idade:", ["Abaixo de 40 anos", "Acima de 40 anos"], horizontal=True, label_visibility="collapsed", key="cat_auto_fiep")
-    elif plano_selecionado not in planos_unificados_auto:
+    elif plano_selecionado not in planos_unificados_auto and plano_selecionado != "FIEP":
         st.markdown("**Selecione a Categoria de Participação:**")
         if plano_selecionado in planos_com_risco:
             opcoes_cat = ["Migrante (Sem Risco)", "Migrante (Com Risco)", "Não Migrante (Sem Risco)", "Não Migrante (Com Risco)"]
@@ -1220,11 +1217,10 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     
                     if plano_dados.get("base_adm_com_risco", False):
                         valor_adm_base = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
-                        taxa_adm_total = arredondar(valor_adm_base * 2)
                     else:
-                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                        valor_adm_base = arredondar(contrib_pura * tx_adm_plano)
                     
-                    total_cobranca = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
+                    total_cobranca = arredondar(contrib_pura + contrib_patr + valor_adm_base + valor_risco)
                     
                     st.success(f"### Cobrança Mensal Total (Boleto): R$ {formatar_br(total_cobranca)}")
                     
@@ -1234,7 +1230,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     col_b2.metric("Contrib. Patrocinadora", "R$ 0,00")
                     
                     if tx_adm_plano > 0:
-                        col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                        col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(valor_adm_base)}")
                     else:
                         col_b3.metric("Taxa Administração", "0% (Não config.)")
                         
@@ -1453,9 +1449,8 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         
                         if plano_dados.get("base_adm_com_risco", False):
                             valor_adm_base = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
-                            taxa_adm_total = arredondar(valor_adm_base * 2)
                         else:
-                            taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                            valor_adm_base = arredondar(contrib_pura * tx_adm_plano)
                         
                         st.success(f"### Salário Correspondente Necessário: R$ {formatar_br(salario_encontrado)}")
                         
@@ -1465,7 +1460,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b2.metric("Contrib. Patrocinadora", "R$ 0,00")
                         
                         if tx_adm_plano > 0:
-                            col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}% x 2)", f"R$ {formatar_br(taxa_adm_total)}")
+                            col_b3.metric(f"Taxa Administração ({formatar_br(tx_adm_plano * 100)}%)", f"R$ {formatar_br(valor_adm_base)}")
                         else:
                             col_b3.metric("Taxa Administração", "0% (Não config.)")
                             
