@@ -851,7 +851,7 @@ if menu_selecionado == "Simulador Individual":
                             taxa_adm_patroc = 0.0
                             taxa_adm_total = arredondar(taxa_adm_part + taxa_adm_patroc)
                             
-                            c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total)
+                            c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_patroc)
                 
                 elif plano_selecionado == "SENAI-PIPREV":
                     c_patr_bruta = arredondar(total + superavit)
