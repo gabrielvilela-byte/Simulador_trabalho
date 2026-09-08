@@ -1113,8 +1113,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                         col_b4.metric(f"Taxa Risco ({formatar_br(tx_risco_plano * 100)}%)", f"R$ {formatar_br(valor_risco)}")
                     else:
                         col_b4.metric("Taxa Risco", "Sem Risco")
-                    else:
-                        col_b4.metric("Taxa Risco", "Sem Risco")
 
                 elif plano_selecionado == "UNERJPREV":
                     contrib_patr = contrib_pura
@@ -1258,7 +1256,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                     tx_risco_plano = 0.0
                 
                 if tx_adm_plano == 0.0 and tx_risco_plano == 0.0 and plano_selecionado not in ["FIEMTPREV", "PREVFIEPA", "PREVIFIEA", "LUNELLIPREV", "UNERJPREV"]:
-                    st.warning("⚠️ Atenção: As taxas de administração e risco deste plano não estão cadastradas no sistema.")
+                    st.warning("⚠️ Atenção: As taxas de administration e risco deste plano não estão cadastradas no sistema.")
                 
                 salario_encontrado = descobrir_salario_autopatrocinio(plano_selecionado, contrib_input, aliq_escolhida_auto_rev, univali_migrante, univali_tipo, idade_ou_tempo_input, faixa_opcao_selecionada, categoria_participante)
                 
