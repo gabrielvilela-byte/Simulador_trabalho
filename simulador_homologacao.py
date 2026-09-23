@@ -1024,7 +1024,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
         | **5** | 1,80% | 3,00% | 7,20% | 9,00% |
         | **6** | 1,50% | 2,50% | 6,00% | 7,50% |
         """)
-        faixa_opcao_selecionada = radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key=f"faixa_{plano_selecionado}_auto")
+        faixa_opcao_selecionada = st.radio("Selecione a Faixa:", ["Faixa 1", "Faixa 2", "Faixa 3", "Faixa 4", "Faixa 5", "Faixa 6"], horizontal=True, key=f"faixa_{plano_selecionado}_auto")
 
     st.divider()
 
@@ -1499,85 +1499,201 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
 # =================================================================
 elif menu_selecionado == "Cálculo de Contribuição em Lote":
     pv.titulo_pagina("📂 Cálculo de Contribuição em Lote")
-    st.write("Baixe a planilha modelo, preencha as informações dos participantes (Salário) e faça o upload para processar múltiplos cálculos de uma só vez.")
+    st.write("Selecione a modalidade e o plano para baixar a planilha modelo personalizada. Preencha os dados dos participantes e faça o upload para processar em lote.")
+
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        modalidade_lote = st.selectbox("Selecione a Modalidade:", ["Ativo (Patrocinado)", "Autopatrocínio"], key="mod_lote_contrib")
     
-    df_modelo = pd.DataFrame({
-        "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "PREVFIEPA", "PREVIFIEA"],
-        "Salário Bruto": [4500.00, 8000.00, 6000.00, 9200.00],
-        "Idade / Tempo Contrib. (Opcional)": [30, 45, 28, 48],
-        "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
-        "Faixa Opção (1 a 6) (Opcional)": [1, 1, 4, 2],
-        "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
-        "Categoria (Opcional)": ["-", "-", "-", "-"],
-        "Univali Tipo (Opcional)": ["-", "-", "-", "-"]
-    })
+    planos_lote_opcoes = [p for p in list(planos.keys()) if p not in ["FECOMERCIO", "PREVITÊ"]]
+    if modalidade_lote == "Autopatrocínio":
+        planos_lote_opcoes = [p for p in planos_lote_opcoes if p != "PREVISC SENAI-MA"]
+        
+    with col_m2:
+        plano_lote_sel = st.selectbox("Selecione o Plano de Previdência:", options=planos_lote_opcoes, key="plano_lote_contrib")
+
+    # Estruturar modelo específico para o plano selecionado
+    def gerar_modelo_contribuicao(plano_nome, modalidade):
+        cols = {"Matrícula / ID": ["1001", "1002"], "Nome Participante": ["João Silva", "Maria Santos"], "Salário Bruto": [5000.00, 8500.00]}
+        
+        if modalidade == "Ativo (Patrocinado)":
+            if plano_nome == "FIEP":
+                cols["Categoria Idade"] = ["Abaixo de 40 anos", "Acima de 40 anos"]
+            elif plano_nome in ["FIESCPREV", "SESC SC (SESCPREV)", "SENACPREV"]:
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome in ["PREVFIEPA", "PREVIFIEA"]:
+                cols["Faixa Opção (1 a 6)"] = [1, 2]
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome == "PREVISC SENAI-MA":
+                cols["Faixa FIEMA (1 a 3)"] = [1, 2]
+            elif plano_nome == "UNIVALIPrevidencia":
+                cols["Categoria"] = ["Migrante", "Não Migrante"]
+                cols["Tipo Contribuição"] = ["Normal", "Reduzida"]
+                cols["Tempo Empresa (Anos)"] = [5, 12]
+            elif plano_nome == "UNERJPREV":
+                cols["Idade"] = [35, 48]
+            elif plano_nome == "LUNELLIPREV":
+                cols["Alíquota %"] = [10.0, 12.0]
+        else: # Autopatrocínio
+            if plano_nome in ["PREVFIEPA", "PREVIFIEA"]:
+                cols["Faixa Opção (1 a 6)"] = [1, 2]
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome in ["FIESCPREV", "SESC SC (SESCPREV)", "SENACPREV"]:
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome == "UNERJPREV":
+                cols["Idade"] = [35, 48]
+
+        return pd.DataFrame(cols)
+
+    df_modelo = gerar_modelo_contribuicao(plano_lote_sel, modalidade_lote)
     
     buffer_modelo = io.BytesIO()
     with pd.ExcelWriter(buffer_modelo, engine='openpyxl') as writer:
         df_modelo.to_excel(writer, index=False, sheet_name="Modelo_Contribuicao")
     
     st.download_button(
-        label="📥 Baixar Planilha Modelo (Contribuição)", 
+        label=f"📥 Baixar Planilha Modelo ({plano_lote_sel} - {modalidade_lote})", 
         data=buffer_modelo.getvalue(), 
-        file_name="modelo_contribuicao_lote.xlsx", 
+        file_name=f"modelo_contrib_{plano_lote_sel.replace(' ', '_')}_{modalidade_lote.split()[0]}.xlsx", 
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
     st.divider()
     
-    st.subheader("Processar Base de Dados")
-    arquivo_upload = st.file_uploader("Faça o upload da planilha preenchida (.xlsx)", type=["xlsx"], key="up_contrib")
+    st.subheader(f"Processar Base de Dados - {plano_lote_sel} ({modalidade_lote})")
+    arquivo_upload = st.file_uploader(f"Faça o upload da planilha preenchida do plano {plano_lote_sel} (.xlsx)", type=["xlsx"], key="up_contrib")
     
     if arquivo_upload is not None:
         try:
             df_lote = pd.read_excel(arquivo_upload)
+            plano_dados = planos[plano_lote_sel]
             
-            # Mapas para ignorar diferenças de maiúsculas/minúsculas
-            map_planos = {k.upper(): k for k in planos.keys()}
-            map_apelidos = {k.upper(): v for k, v in apelidos_planilha.items()}
+            res_contrib_part = []
+            res_contrib_patr = []
+            res_taxa_adm = []
+            res_taxa_risco = []
+            res_total_boleto = []
             
-            resultados = []
             for idx, row in df_lote.iterrows():
-                plano_input = str(row.get("Plano", "")).strip().upper()
-                plano_oficial = map_apelidos.get(plano_input, map_planos.get(plano_input, str(row.get("Plano", ""))))
+                salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
                 
-                if plano_oficial in planos:
-                    salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
-                    idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
+                # Leitura de variáveis dinâmicas conforme o plano
+                idade_ou_tempo = 30
+                if "Idade" in df_lote.columns and pd.notna(row.get("Idade")):
+                    idade_ou_tempo = int(row.get("Idade"))
+                elif "Tempo Empresa (Anos)" in df_lote.columns and pd.notna(row.get("Tempo Empresa (Anos)")):
+                    idade_ou_tempo = int(row.get("Tempo Empresa (Anos)"))
                     
-                    try:
-                        aliq_bruta = str(row.get("Aliquota Opcional % (Opcional)", "0")).replace(",", ".")
-                        aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and aliq_bruta.strip() not in ["", "-"] and float(aliq_bruta) > 0 else None
-                    except:
-                        aliq = None
+                faixa_opt = "Faixa 1"
+                if "Faixa Opção (1 a 6)" in df_lote.columns and pd.notna(row.get("Faixa Opção (1 a 6)")):
+                    faixa_opt = f"Faixa {str(row.get('Faixa Opção (1 a 6)')).split('.')[0].strip()}"
+                elif "Faixa FIEMA (1 a 3)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3)")):
+                    faixa_opt = f"Faixa {str(row.get('Faixa FIEMA (1 a 3)')).split('.')[0].strip()}"
+
+                aliq_escolhida = None
+                if "Alíquota %" in df_lote.columns and pd.notna(row.get("Alíquota %")):
+                    aliq_escolhida = float(row.get("Alíquota %")) / 100.0
+
+                univali_migrante = str(row.get("Categoria", "Migrante")).strip() if "Categoria" in df_lote.columns and pd.notna(row.get("Categoria")) else "Migrante"
+                univali_tipo = str(row.get("Tipo Contribuição", "Normal")).strip() if "Tipo Contribuição" in df_lote.columns and pd.notna(row.get("Tipo Contribuição")) else "Normal"
+                
+                categoria_part = "Não Migrante"
+                if modalidade_lote == "Ativo (Patrocinado)":
+                    if plano_lote_sel == "FIEP":
+                        categoria_part = str(row.get("Categoria Idade", "Abaixo de 40 anos")).strip()
+                    elif plano_lote_sel in ["FIESCPREV", "SESC SC (SESCPREV)", "SENACPREV", "PREVFIEPA", "PREVIFIEA"]:
+                        cat_risco = str(row.get("Categoria Risco", "Com Risco")).strip()
+                        categoria_part = f"Não Migrante ({cat_risco})" if plano_lote_sel != "SENACPREV" else f"Migrante ({cat_risco})"
+                else: # Autopatrocínio
+                    if plano_lote_sel == "SENACPREV":
+                        categoria_part = "Migrante (Com Risco)"
+                    elif plano_lote_sel in ["SESC SC (SESCPREV)", "FIESCPREV"]:
+                        cat_risco = str(row.get("Categoria Risco", "Com Risco")).strip() if "Categoria Risco" in df_lote.columns else "Com Risco"
+                        categoria_part = f"Não Migrante ({cat_risco})"
+                    elif plano_lote_sel == "UNIVALIPrevidencia":
+                        categoria_part = "Não Migrante (Com Risco)"
+                        univali_migrante = "Não Migrante"
+                        univali_tipo = "Normal"
+                        idade_ou_tempo = 10
+                    elif plano_lote_sel in ["PREVFIEPA", "PREVIFIEA"]:
+                        cat_risco = str(row.get("Categoria Risco", "Com Risco")).strip() if "Categoria Risco" in df_lote.columns else "Com Risco"
+                        categoria_part = f"Não Migrante ({cat_risco})"
+
+                tx_adm_plano = plano_dados.get("tx_adm", 0.0)
+                tx_risco_plano = plano_dados.get("tx_risco_auto", plano_dados.get("tx_risco", 0.0)) if modalidade_lote == "Autopatrocínio" else plano_dados.get("tx_risco", 0.0)
+                tem_risco = "Com Risco" in categoria_part
+
+                if modalidade_lote == "Ativo (Patrocinado)":
+                    total_p, f1, f2, f3, superavit = calcular_contribuicao(plano_lote_sel, salario, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt, is_autopatrocinio=False)
+                    valor_risco = arredondar(salario * tx_risco_plano) if tem_risco else 0.0
                     
-                    univ_cat = str(row.get("Categoria (Opcional)", "Migrante")).strip() if "Categoria (Opcional)" in df_lote.columns else "Migrante"
-                    # Compatibilidade com planilhas antigas
-                    if "Univali Categoria (Opcional)" in df_lote.columns:
-                        univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip()
-                        
-                    univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote.columns else "Normal"
+                    # Cálculo de contrapartida patronal e taxas para o lote
+                    if plano_lote_sel == "UNIVALIPrevidencia":
+                        taxa_adm_total = arredondar(total_p * tx_adm_plano)
+                        c_patr_exibir = total_p if univali_migrante == "Não Migrante" else total_p * (1.0 if idade_ou_tempo >= 10 else 0.5)
+                    elif plano_lote_sel == "SENAI-PIPREV":
+                        c_patr_bruta = arredondar(total_p + superavit)
+                        taxa_adm_total = arredondar((c_patr_bruta * 2) * tx_adm_plano)
+                        c_patr_exibir = arredondar(total_p - taxa_adm_total)
+                    elif plano_lote_sel == "SESI-PIPREV":
+                        taxa_adm_total = arredondar(f1 * tx_adm_plano * 2)
+                        c_patr_exibir = total_p
+                    elif plano_lote_sel in ["PREVFIEPA", "PREVIFIEA"]:
+                        c_patr_bruta = arredondar(total_p + superavit)
+                        taxa_adm_total = arredondar(c_patr_bruta * tx_adm_plano)
+                        c_patr_exibir = arredondar(c_patr_bruta - taxa_adm_total - valor_risco)
+                    else:
+                        c_patr_bruta = arredondar(total_p + superavit)
+                        if plano_lote_sel == "FIEP" and "Abaixo" in categoria_part:
+                            c_patr_bruta = arredondar(c_patr_bruta * 0.50)
+                        taxa_adm_total = arredondar((total_p * 2) * tx_adm_plano) if tx_adm_plano > 0 else 0.0
+                        c_patr_exibir = c_patr_bruta
+
+                    res_contrib_part.append(formatar_br(total_p))
+                    res_contrib_patr.append(formatar_br(c_patr_exibir))
+                    res_taxa_adm.append(formatar_br(taxa_adm_total))
+                    res_taxa_risco.append(formatar_br(valor_risco))
+                    res_total_boleto.append(formatar_br(arredondar(total_p + c_patr_exibir)))
+                
+                else: # Autopatrocínio
+                    contrib_pura, f1, f2, f3, superavit = calcular_contribuicao(plano_lote_sel, salario, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt, is_autopatrocinio=True)
+                    valor_risco = arredondar(salario * tx_risco_plano) if tem_risco else 0.0
                     
-                    if univ_cat in ["", "-", "nan", "NaN"]: univ_cat = "Migrante"
-                    if univ_tipo in ["", "-", "nan", "NaN"]: univ_tipo = "Normal"
-                    
-                    faixa_val = "1"
-                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
-                        faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
-                    elif plano_oficial in ["PREVFIEPA", "PREVIFIEA"]:
-                        if "Faixa Opção (1 a 6) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa Opção (1 a 6) (Opcional)")):
-                            faixa_val = str(row.get("Faixa Opção (1 a 6) (Opcional)")).split('.')[0].strip()
-                        elif "Faixa FIEPA (1 a 6) (Opcional)" in df_lote.columns and pd.notna(row.get("Faixa FIEPA (1 a 6) (Opcional)")):
-                            faixa_val = str(row.get("Faixa FIEPA (1 a 6) (Opcional)")).split('.')[0].strip()
-                    
-                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
-                    
-                    total_pagar = calcular_contribuicao(plano_oficial, salario, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)[0]
-                    resultados.append(total_pagar)
-                else:
-                    resultados.append("Plano Não Encontrado")
-            
-            df_lote["Contribuição Sugerida (R$)"] = [formatar_br(v) for v in resultados]
+                    if plano_lote_sel == "FIESCPREV":
+                        contrib_patr = 0.0
+                        taxa_adm_total = arredondar((contrib_pura + valor_risco) * tx_adm_plano)
+                    elif plano_lote_sel == "UNIVALIPrevidencia":
+                        contrib_patr = 0.0
+                        taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
+                    elif plano_lote_sel in ["FIEMTPREV", "SENAI-PIPREV", "SESI-PIPREV"]:
+                        taxa_adm_total = arredondar((contrib_pura * 2) * tx_adm_plano)
+                        contrib_patr = arredondar(contrib_pura - taxa_adm_total)
+                    elif plano_lote_sel in ["PREVFIEPA", "PREVIFIEA"]:
+                        taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
+                        contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
+                    elif plano_lote_sel == "UNERJPREV":
+                        contrib_patr = contrib_pura
+                        taxa_adm_total = 0.0
+                    elif plano_lote_sel == "LUNELLIPREV":
+                        contrib_patr = arredondar(contrib_pura * 0.10)
+                        taxa_adm_total = 0.0
+                    else:
+                        contrib_patr = 0.0
+                        taxa_adm_total = arredondar(contrib_pura * tx_adm_plano)
+
+                    total_boleto = arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
+
+                    res_contrib_part.append(formatar_br(contrib_pura))
+                    res_contrib_patr.append(formatar_br(contrib_patr))
+                    res_taxa_adm.append(formatar_br(taxa_adm_total))
+                    res_taxa_risco.append(formatar_br(valor_risco))
+                    res_total_boleto.append(formatar_br(total_boleto))
+
+            df_lote["Contrib. Participante (R$)"] = res_contrib_part
+            df_lote["Contrib. Patrocinadora (R$)"] = res_contrib_patr
+            df_lote["Taxa Adm (R$)"] = res_taxa_adm
+            df_lote["Taxa Risco (R$)"] = res_taxa_risco
+            df_lote["Total Calculado / Boleto (R$)"] = res_total_boleto
             
             st.success("Cálculo em lote finalizado com sucesso!")
             st.dataframe(df_lote, use_container_width=True)
@@ -1589,11 +1705,11 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
             st.download_button(
                 label="📤 Baixar Resultados Processados", 
                 data=buffer_resultado.getvalue(), 
-                file_name="resultado_contribuicao_lote.xlsx", 
+                file_name=f"resultado_contrib_{plano_lote_sel.replace(' ', '_')}.xlsx", 
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         except Exception as e:
-            st.error(f"Erro ao ler a planilha. Detalhe: {e}")
+            st.error(f"Erro ao processar a planilha. Detalhe: {e}")
 
 
 # =================================================================
@@ -1601,87 +1717,131 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
 # =================================================================
 elif menu_selecionado == "Cálculo de Salário em Lote":
     pv.titulo_pagina("📂 Cálculo de Salário em Lote")
-    st.write("Baixe a planilha modelo, preencha a Cobrança Alvo de cada participante e faça o upload para descobrir os salários correspondentes.")
+    st.write("Selecione a modalidade e o plano para baixar a planilha modelo de cálculo reverso. Preencha a contribuição ou boleto alvo dos participantes para descobrir os salários correspondentes.")
+
+    col_sm1, col_sm2 = st.columns(2)
+    with col_sm1:
+        modalidade_sal_lote = st.selectbox("Selecione a Modalidade:", ["Ativo (Patrocinado)", "Autopatrocínio"], key="mod_lote_sal")
     
-    df_modelo_rev = pd.DataFrame({
-        "Plano": ["FIESCPREV", "PREVISC SENAI-MA", "PREVFIEPA", "PREVIFIEA"],
-        "Cobrança Alvo": [450.00, 300.00, 200.00, 520.00],
-        "Idade / Tempo Contrib. (Opcional)": [30, 45, 28, 48],
-        "Faixa FIEMA (1 a 3) (Opcional)": [1, 2, 1, 1],
-        "Faixa Opção (1 a 6) (Opcional)": [1, 1, 4, 2],
-        "Aliquota Opcional % (Opcional)": [0.0, 0.0, 0.0, 0.0],
-        "Categoria (Opcional)": ["-", "-", "-", "-"],
-        "Univali Tipo (Opcional)": ["-", "-", "-", "Normal"]
-    })
+    planos_sal_lote_opcoes = [p for p in list(planos.keys()) if p not in ["FECOMERCIO", "PREVITÊ"]]
+    if modalidade_sal_lote == "Autopatrocínio":
+        planos_sal_lote_opcoes = [p for p in planos_sal_lote_opcoes if p != "PREVISC SENAI-MA"]
+
+    with col_sm2:
+        plano_sal_lote_sel = st.selectbox("Selecione o Plano de Previdência:", options=planos_sal_lote_opcoes, key="plano_lote_sal")
+
+    def gerar_modelo_salario(plano_nome, modalidade):
+        label_alvo = "Contribuição Alvo" if modalidade == "Ativo (Patrocinado)" else "Valor Boleto Alvo"
+        cols = {"Matrícula / ID": ["1001", "1002"], "Nome Participante": ["João Silva", "Maria Santos"], label_alvo: [250.00, 480.00]}
+        
+        if modalidade == "Ativo (Patrocinado)":
+            if plano_nome == "FIEP":
+                cols["Categoria Idade"] = ["Abaixo de 40 anos", "Acima de 40 anos"]
+            elif plano_nome in ["FIESCPREV", "SESC SC (SESCPREV)", "SENACPREV"]:
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome in ["PREVFIEPA", "PREVIFIEA"]:
+                cols["Faixa Opção (1 a 6)"] = [1, 2]
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome == "PREVISC SENAI-MA":
+                cols["Faixa FIEMA (1 a 3)"] = [1, 2]
+            elif plano_nome == "UNIVALIPrevidencia":
+                cols["Categoria"] = ["Migrante", "Não Migrante"]
+                cols["Tipo Contribuição"] = ["Normal", "Reduzida"]
+                cols["Tempo Empresa (Anos)"] = [5, 12]
+            elif plano_nome == "UNERJPREV":
+                cols["Idade"] = [35, 48]
+            elif plano_nome == "LUNELLIPREV":
+                cols["Alíquota %"] = [10.0, 12.0]
+        else: # Autopatrocínio
+            if plano_nome in ["PREVFIEPA", "PREVIFIEA"]:
+                cols["Faixa Opção (1 a 6)"] = [1, 2]
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome in ["FIESCPREV", "SESC SC (SESCPREV)", "SENACPREV"]:
+                cols["Categoria Risco"] = ["Com Risco", "Sem Risco"]
+            elif plano_nome == "UNERJPREV":
+                cols["Idade"] = [35, 48]
+
+        return pd.DataFrame(cols)
+
+    df_modelo_rev = gerar_modelo_salario(plano_sal_lote_sel, modalidade_sal_lote)
     
     buffer_modelo_rev = io.BytesIO()
     with pd.ExcelWriter(buffer_modelo_rev, engine='openpyxl') as writer:
         df_modelo_rev.to_excel(writer, index=False, sheet_name="Modelo_Salario")
     
     st.download_button(
-        label="📥 Baixar Planilha Modelo (Salário)", 
+        label=f"📥 Baixar Planilha Modelo Salário ({plano_sal_lote_sel} - {modalidade_sal_lote})", 
         data=buffer_modelo_rev.getvalue(), 
-        file_name="modelo_salario_lote.xlsx", 
+        file_name=f"modelo_salario_{plano_sal_lote_sel.replace(' ', '_')}_{modalidade_sal_lote.split()[0]}.xlsx", 
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
     st.divider()
     
-    st.subheader("Processar Base de Dados")
-    arquivo_upload_rev = st.file_uploader("Faça o upload da planilha preenchida (.xlsx)", type=["xlsx"], key="up_salario")
+    st.subheader(f"Processar Base de Dados - {plano_sal_lote_sel} ({modalidade_sal_lote})")
+    arquivo_upload_rev = st.file_uploader(f"Faça o upload da planilha preenchida do plano {plano_sal_lote_sel} (.xlsx)", type=["xlsx"], key="up_salario")
     
     if arquivo_upload_rev is not None:
         try:
             df_lote_rev = pd.read_excel(arquivo_upload_rev)
             
-            map_planos = {k.upper(): k for k in planos.keys()}
-            map_apelidos = {k.upper(): v for k, v in apelidos_planilha.items()}
+            resultados_sal = []
+            col_alvo_nome = "Contribuição Alvo" if "Contribuição Alvo" in df_lote_rev.columns else "Valor Boleto Alvo"
             
-            resultados_rev = []
             for idx, row in df_lote_rev.iterrows():
-                plano_input = str(row.get("Plano", "")).strip().upper()
-                plano_oficial = map_apelidos.get(plano_input, map_planos.get(plano_input, str(row.get("Plano", ""))))
+                alvo = float(row.get(col_alvo_nome, 0.0)) if pd.notna(row.get(col_alvo_nome)) else 0.0
                 
-                if plano_oficial in planos:
-                    contribuicao_alvo = float(row.get("Cobrança Alvo", 0.0)) if "Cobrança Alvo" in df_lote_rev.columns and pd.notna(row.get("Cobrança Alvo")) else 0.0
-                    idade = int(row.get("Idade / Tempo Contrib. (Opcional)", 30)) if "Idade / Tempo Contrib. (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Idade / Tempo Contrib. (Opcional)")) else 30
+                idade_ou_tempo = 30
+                if "Idade" in df_lote_rev.columns and pd.notna(row.get("Idade")):
+                    idade_ou_tempo = int(row.get("Idade"))
+                elif "Tempo Empresa (Anos)" in df_lote_rev.columns and pd.notna(row.get("Tempo Empresa (Anos)")):
+                    idade_ou_tempo = int(row.get("Tempo Empresa (Anos)"))
                     
-                    try:
-                        aliq_bruta = str(row.get("Aliquota Opcional % (Opcional)", "0")).replace(",", ".")
-                        aliq = float(aliq_bruta) / 100 if pd.notna(aliq_bruta) and aliq_bruta.strip() not in ["", "-"] and float(aliq_bruta) > 0 else None
-                    except:
-                        aliq = None
+                faixa_opt = "Faixa 1"
+                if "Faixa Opção (1 a 6)" in df_lote_rev.columns and pd.notna(row.get("Faixa Opção (1 a 6)")):
+                    faixa_opt = f"Faixa {str(row.get('Faixa Opção (1 a 6)')).split('.')[0].strip()}"
+                elif "Faixa FIEMA (1 a 3)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3)")):
+                    faixa_opt = f"Faixa {str(row.get('Faixa FIEMA (1 a 3)')).split('.')[0].strip()}"
+
+                aliq_escolhida = None
+                if "Alíquota %" in df_lote_rev.columns and pd.notna(row.get("Alíquota %")):
+                    aliq_escolhida = float(row.get("Alíquota %")) / 100.0
+
+                univali_migrante = str(row.get("Categoria", "Migrante")).strip() if "Categoria" in df_lote_rev.columns and pd.notna(row.get("Categoria")) else "Migrante"
+                univali_tipo = str(row.get("Tipo Contribuição", "Normal")).strip() if "Tipo Contribuição" in df_lote_rev.columns and pd.notna(row.get("Tipo Contribuição")) else "Normal"
+                
+                categoria_part = "Não Migrante"
+                if modalidade_sal_lote == "Ativo (Patrocinado)":
+                    if plano_sal_lote_sel == "FIEP":
+                        categoria_part = str(row.get("Categoria Idade", "Abaixo de 40 anos")).strip()
+                    elif plano_sal_lote_sel in ["FIESCPREV", "SESC SC (SESCPREV)", "SENACPREV", "PREVFIEPA", "PREVIFIEA"]:
+                        cat_risco = str(row.get("Categoria Risco", "Com Risco")).strip()
+                        categoria_part = f"Não Migrante ({cat_risco})" if plano_sal_lote_sel != "SENACPREV" else f"Migrante ({cat_risco})"
                     
-                    univ_cat = str(row.get("Categoria (Opcional)", "Migrante")).strip() if "Categoria (Opcional)" in df_lote_rev.columns else "Migrante"
-                    if "Univali Categoria (Opcional)" in df_lote_rev.columns:
-                        univ_cat = str(row.get("Univali Categoria (Opcional)", "Migrante")).strip()
-                        
-                    univ_tipo = str(row.get("Univali Tipo (Opcional)", "Normal")).strip() if "Univali Tipo (Opcional)" in df_lote_rev.columns else "Normal"
-                    
-                    if univ_cat in ["", "-", "nan", "NaN"]: univ_cat = "Migrante"
-                    if univ_tipo in ["", "-", "nan", "NaN"]: univ_tipo = "Normal"
-                    
-                    faixa_val = "1"
-                    if "Faixa FIEMA (1 a 3) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEMA (1 a 3) (Opcional)")) and plano_oficial == "PREVISC SENAI-MA":
-                        faixa_val = str(row.get("Faixa FIEMA (1 a 3) (Opcional)")).split('.')[0].strip()
-                    elif plano_oficial in ["PREVFIEPA", "PREVIFIEA"]:
-                        if "Faixa Opção (1 a 6) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa Opção (1 a 6) (Opcional)")):
-                            faixa_val = str(row.get("Faixa Opção (1 a 6) (Opcional)")).split('.')[0].strip()
-                        elif "Faixa FIEPA (1 a 6) (Opcional)" in df_lote_rev.columns and pd.notna(row.get("Faixa FIEPA (1 a 6) (Opcional)")):
-                            faixa_val = str(row.get("Faixa FIEPA (1 a 6) (Opcional)")).split('.')[0].strip()
-                    
-                    faixa_opcao_planilha = f"Faixa {faixa_val}" if faixa_val in ["1", "2", "3", "4", "5", "6"] else "Faixa 1"
-                    
-                    salario_descob = calcular_salario_reverso(plano_oficial, contribuicao_alvo, aliq, univ_cat, univ_tipo, idade, faixa_opcao_planilha)
-                    
-                    if salario_descob == 0:
-                        resultados_rev.append("Cálculo Incompatível")
-                    else:
-                        resultados_rev.append(salario_descob)
+                    salario_calc = calcular_salario_reverso(plano_sal_lote_sel, alvo, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt)
+                else: # Autopatrocínio
+                    if plano_sal_lote_sel == "SENACPREV":
+                        categoria_part = "Migrante (Com Risco)"
+                    elif plano_sal_lote_sel in ["SESC SC (SESCPREV)", "FIESCPREV"]:
+                        cat_risco = str(row.get("Categoria Risco", "Com Risco")).strip() if "Categoria Risco" in df_lote_rev.columns else "Com Risco"
+                        categoria_part = f"Não Migrante ({cat_risco})"
+                    elif plano_sal_lote_sel == "UNIVALIPrevidencia":
+                        categoria_part = "Não Migrante (Com Risco)"
+                        univali_migrante = "Não Migrante"
+                        univali_tipo = "Normal"
+                        idade_ou_tempo = 10
+                    elif plano_sal_lote_sel in ["PREVFIEPA", "PREVIFIEA"]:
+                        cat_risco = str(row.get("Categoria Risco", "Com Risco")).strip() if "Categoria Risco" in df_lote_rev.columns else "Com Risco"
+                        categoria_part = f"Não Migrante ({cat_risco})"
+
+                    salario_calc = descobrir_salario_autopatrocinio(plano_sal_lote_sel, alvo, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt, categoria_part)
+
+                if salario_calc == 0.0:
+                    resultados_sal.append("Cálculo Incompatível")
                 else:
-                    resultados_rev.append("Plano Não Encontrado")
-            
-            df_lote_rev["Salário Exato Necessário (R$)"] = [formatar_br(v) for v in resultados_rev]
+                    resultados_sal.append(formatar_br(salario_calc))
+
+            df_lote_rev["Salário Exato Necessário (R$)"] = resultados_sal
             
             st.success("Cálculo em lote finalizado com sucesso!")
             st.dataframe(df_lote_rev, use_container_width=True)
@@ -1693,11 +1853,11 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
             st.download_button(
                 label="📤 Baixar Resultados Processados", 
                 data=buffer_resultado_rev.getvalue(), 
-                file_name="resultado_salario_lote.xlsx", 
+                file_name=f"resultado_salario_{plano_sal_lote_sel.replace(' ', '_')}.xlsx", 
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         except Exception as e:
-            st.error(f"Erro ao processar. Detalhe: {e}")
+            st.error(f"Erro ao processar a planilha. Detalhe: {e}")
 
 
 # =================================================================
