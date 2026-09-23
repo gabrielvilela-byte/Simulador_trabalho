@@ -549,7 +549,7 @@ def simular_cobranca_autopatrocinio(plano_nome, salario, aliq_escolhida=None, un
         contrib_patr = arredondar(contrib_pura - taxa_adm_total - valor_risco)
         return arredondar(contrib_pura + contrib_patr + taxa_adm_total + valor_risco)
 
-    # Default Fallback (SENACPREV, etc.) revertido para a lógica correta (sem *2)
+    # Default Fallback (SENACPREV, etc.)
     contrib_patr = 0.0
     if plano.get("base_adm_com_risco", False):
         valor_adm_base = arredondar((contrib_pura + valor_risco) * tx_adm)
@@ -713,7 +713,6 @@ if menu_selecionado == "Simulador Individual":
     aba_normal, aba_reversa = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
 
     with aba_normal:
-        
         salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_normal")
         salario_input = converter_br(salario_input_str)
         
@@ -906,7 +905,6 @@ if menu_selecionado == "Simulador Individual":
                     st.caption("⚠️ *A patrocinadora (Lunelli) aporta 10% fixo sobre a contribuição do participante, acrescido de um rateio anual variável que depende do fundo global da empresa. O simulador projeta apenas a cota fixa garantida.*")
                 
                 col_p1, col_p2, col_p3 = st.columns(3)
-                
                 col_p1.metric("Contrib. Patrocinadora (Líquida)", f"R$ {formatar_br(c_patr_exibir)}")
                 
                 if plano_selecionado in ["LUNELLIPREV", "UNERJPREV"]:
@@ -937,7 +935,6 @@ if menu_selecionado == "Simulador Individual":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa:
-        
         contrib_input_str = st.text_input("Digite a Contribuição Alvo (R$):", value="0,00", key="contrib_reversa")
         contrib_input = converter_br(contrib_input_str)
         
@@ -1031,7 +1028,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
     aba_normal_auto, aba_reversa_auto = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
 
     with aba_normal_auto:
-        
         salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_auto")
         salario_input = converter_br(salario_input_str)
         
@@ -1254,7 +1250,6 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa_auto:
-        
         contrib_input_str = st.text_input("Digite o Valor do Boleto Mensal (R$):", value="0,00", key="contrib_reversa_auto")
         contrib_input = converter_br(contrib_input_str)
         
@@ -1577,7 +1572,6 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
             for idx, row in df_lote.iterrows():
                 salario = float(row.get("Salário Bruto", 0.0)) if pd.notna(row.get("Salário Bruto")) else 0.0
                 
-                # Leitura de variáveis dinâmicas conforme o plano
                 idade_ou_tempo = 30
                 if "Idade" in df_lote.columns and pd.notna(row.get("Idade")):
                     idade_ou_tempo = int(row.get("Idade"))
@@ -1627,7 +1621,6 @@ elif menu_selecionado == "Cálculo de Contribuição em Lote":
                     total_p, f1, f2, f3, superavit = calcular_contribuicao(plano_lote_sel, salario, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt, is_autopatrocinio=False)
                     valor_risco = arredondar(salario * tx_risco_plano) if tem_risco else 0.0
                     
-                    # Cálculo de contrapartida patronal e taxas para o lote
                     if plano_lote_sel == "UNIVALIPrevidencia":
                         taxa_adm_total = arredondar(total_p * tx_adm_plano)
                         c_patr_exibir = total_p if univali_migrante == "Não Migrante" else total_p * (1.0 if idade_ou_tempo >= 10 else 0.5)
