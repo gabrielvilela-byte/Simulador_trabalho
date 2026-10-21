@@ -23,7 +23,7 @@ pv.aplicar("capa" if menu_selecionado in ('home', 'menu') else "interna")
 # =================================================================
 planos = {
     "FIESCPREV": {"ur": 716.84, "teto_urs": 7.0, "aliq_1": 0.030, "aliq_2": 0.1400, "tx_adm": 0.0218, "tx_risco": 0.0034, "tipo": "faixas", "base_adm_com_risco": True},
-    "FIEP": {"ur": 742.37, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
+    "FIEP": {"ur": 781.42, "teto_urs": 8.5, "aliq_1": 0.030, "aliq_2": 0.0750, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas"},
     "SENACPREV": {"ur": 734.75, "teto_urs": 8.0, "aliq_1": 0.023, "aliq_2": 0.0740, "tx_adm": 0.0218, "tx_risco": 0.0012, "tx_risco_auto": 0.0024, "tipo": "faixas"},
     "SENAI-PIPREV": {"ur": 7376.89, "teto1_urs": 0.5, "teto2_urs": 1.0, "aliq_1": 0.01, "aliq_2": 0.04, "aliq_3": 0.08, "superavit": 0.0728, "tx_adm": 0.0218, "tx_risco": 0.0, "tipo": "faixas_triplas_senai"},
     "PREVISC SENAI-MA": {"teto1_rs": 2521.45, "teto2_rs": 5042.89, "tx_adm": 0.0235, "tx_risco": 0.0, "tipo": "faixas_triplas_fiema"},
@@ -905,6 +905,7 @@ if menu_selecionado == "Simulador Individual":
                     st.caption("⚠️ *A patrocinadora (Lunelli) aporta 10% fixo sobre a contribuição do participante, acrescido de um rateio anual variável que depende do fundo global da empresa. O simulador projeta apenas a cota fixa garantida.*")
                 
                 col_p1, col_p2, col_p3 = st.columns(3)
+                
                 col_p1.metric("Contrib. Patrocinadora (Líquida)", f"R$ {formatar_br(c_patr_exibir)}")
                 
                 if plano_selecionado in ["LUNELLIPREV", "UNERJPREV"]:
@@ -935,6 +936,7 @@ if menu_selecionado == "Simulador Individual":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa:
+        
         contrib_input_str = st.text_input("Digite a Contribuição Alvo (R$):", value="0,00", key="contrib_reversa")
         contrib_input = converter_br(contrib_input_str)
         
@@ -1028,6 +1030,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
     aba_normal_auto, aba_reversa_auto = st.tabs(["Cálculo de Contribuição", "Cálculo de salário"])
 
     with aba_normal_auto:
+        
         salario_input_str = st.text_input("Digite o Salário Atual (R$):", value="0,00", key="sal_auto")
         salario_input = converter_br(salario_input_str)
         
@@ -1250,6 +1253,7 @@ elif menu_selecionado == "Simulador de Autopatrocínio":
                 st.warning("Insira um salário válido.")
 
     with aba_reversa_auto:
+        
         contrib_input_str = st.text_input("Digite o Valor do Boleto Mensal (R$):", value="0,00", key="contrib_reversa_auto")
         contrib_input = converter_br(contrib_input_str)
         
@@ -1699,7 +1703,7 @@ elif menu_selecionado == "Cálculo de Salário em Lote":
                 is_auto = (modalidade_sal_lote == "Autopatrocínio")
                 
                 if is_auto:
-                    salario_calc = descobrir_salario_autopatrocinio(plano_sal_lote_sel, alvo, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt)
+                    salario_calc = descobrir_salario_autopatrocinio(plano_sal_lote_sel, alvo, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt, "Não Migrante")
                 else:
                     salario_calc = calcular_salario_reverso(plano_sal_lote_sel, alvo, aliq_escolhida, univali_migrante, univali_tipo, idade_ou_tempo, faixa_opt)
 
@@ -1736,7 +1740,7 @@ elif menu_selecionado == "Regras e Bases de Cálculo":
     
     dados_tabela = [
         {"Plano": "FIESCPREV", "Indexador": "UR", "Valor (R$)": "716,84", "Regra de Cálculo": "Faixas: 3% (Até 7 UR) | 14% (Acima) - Taxa Adm total = (Participante + Patrocinadora) * 2,18%. Risco não gera taxa adm."},
-        {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "742,37", "Regra de Cálculo": "Faixas: 3% (Até 8,5 UR) | 7,5% (Acima). Patrocinadora aporta 50% (< 40 anos) ou 100% (>= 40 anos)."},
+        {"Plano": "FIEP", "Indexador": "UR", "Valor (R$)": "781,42", "Regra de Cálculo": "Faixas: 3% (Até 8,5 UR) | 7,5% (Acima). Patrocinadora aporta 50% (< 40 anos) ou 100% (>= 40 anos)."},
         {"Plano": "SENACPREV", "Indexador": "UR", "Valor (R$)": "734,75", "Regra de Cálculo": "Faixas: 2,3% (Até 8 UR) | 7,4% (Acima)"},
         {"Plano": "SENAI-PIPREV", "Indexador": "UR", "Valor (R$)": "7.376,89", "Regra de Cálculo": "Faixas Cascata: 1% (Até 0,5) | 4% (0,5 a 1) | 8% (Acima) - Desconto Superávit (7,28%). Taxa Adm = 2,18% sobre o dobro da cota pura. Aporte da Patrocinadora deduz a taxa adm."},
         {"Plano": "PREVISC SENAI-MA", "Indexador": "Valores Fixos", "Valor (R$)": "-", "Regra de Cálculo": "Cascata de Múltiplas Faixas: De 1,50% a 16,10% dependendo da opção escolhida pelo participante (Faixas: R$ 2.521,45 e R$ 5.042,89)"},
